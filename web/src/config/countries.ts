@@ -53,8 +53,14 @@ export const COUNTRIES: CountryConfig[] = [
     currencySymbol: '₦',
     live: true,
     priceFeedMethod: 'scraper',
-    source: 'FMARD (Federal Ministry of Agriculture)',
-    crops: ['maize', 'cassava', 'rice', 'sorghum', 'groundnuts', 'soybeans'],
+    // Source changed from the originally planned FMARD (Federal Ministry of
+    // Agriculture) to NBS Food Price Tracking after live verification found
+    // fmard.gov.ng now redirects to agriculture.gov.ng with no price pages
+    // at all. NBS's dataset also doesn't cover cassava/groundnuts, so those
+    // two crops are intentionally left out here rather than faked - see
+    // web_progress.md.
+    source: 'NBS Food Price Tracking (National Bureau of Statistics)',
+    crops: ['maize', 'rice', 'sorghum', 'soybeans'],
   },
   {
     code: 'GH',
@@ -85,8 +91,13 @@ export const COUNTRIES: CountryConfig[] = [
     currencyCode: 'BRL',
     currencySymbol: 'R$',
     live: true,
-    priceFeedMethod: 'scraper',
-    source: 'IBGE (Brazilian Institute of Geography and Statistics)',
+    // Downgraded from 'scraper' to 'admin' after live verification: CONAB's
+    // own site is a JS-only consulta tool (not scrapable), and IBGE/SIDRA
+    // (the tentative substitute from an earlier session) has no
+    // crop-specific price aggregate at all - only production/yield surveys
+    // and general consumer price indices. See web_progress.md.
+    priceFeedMethod: 'admin',
+    source: 'AgroLease market reference (Brazil)',
     crops: ['soybeans', 'coffee', 'sugarcane', 'maize'],
   },
   {

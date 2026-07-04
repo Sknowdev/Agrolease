@@ -26,6 +26,11 @@ export function HomeHero({ detectedCountryCode }: { detectedCountryCode: string 
     if (stored) {
       const country = getCountryBySlug(stored);
       if (country) {
+        // localStorage isn't available during SSR, so the server-rendered
+        // fallback must be corrected on mount once we know the real
+        // override. This is the standard hydration-safe pattern for
+        // reading browser-only storage.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from localStorage, unavoidable on mount
         setCountrySlug(country.slug);
         setCropSlug(country.crops[0]);
       }

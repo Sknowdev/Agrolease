@@ -93,7 +93,7 @@ export default async function PricePage({ params }: PageProps) {
       {jsonLd && (
         <script
           type="application/ld+json"
-          // eslint-disable-next-line react/no-danger -- static, server-generated JSON-LD, no user input
+          // Static, server-generated JSON-LD with no user input - safe to inject directly.
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
