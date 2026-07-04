@@ -94,17 +94,25 @@ async function getExchangeRateToUsd(currencyCode) {
  * price panel spec.
  */
 export async function logScraperRun({ source, status, rowsWritten, rowsSkipped, error }) {
-  const supabase = getSupabaseClient();
-  const { error: insertError } = await supabase.from('scraper_run_logs').insert({
-    source,
-    status,
-    rows_written: rowsWritten,
-    rows_skipped: rowsSkipped,
-    error: error ? String(error.message || error) : null,
-  });
+  // Wraps the ENTIRE operation (including getSupabaseClient(), which
+  // throws synchronously if credentials are missing) in a try/catch.
+  // A logging failure - including "no .env configured yet", which is the
+  // very first thing a fresh clone of this repo will hit - must never
+  // crash the scraper run itself.
+  try {
+    const supabase = getSupabaseClient();
+    const { error: insertError } = await supabase.from('scraper_run_logs').insert({
+      source,
+      status,
+      rows_written: rowsWritten,
+      rows_skipped: rowsSkipped,
+      error: error ? String(error.message || error) : null,
+    });
 
-  if (insertError) {
-    // Don't let a logging failure crash the scraper run itself.
-    console.error(`[scraper_run_logs] failed to write log row: ${insertError.message}`);
+    if (insertError) {
+      console.error(`[scraper_run_logs] failed to write log row: ${insertError.message}`);
+    }
+  } catch (loggingError) {
+    console.error(`[scraper_run_logs] skipped: ${loggingError.message}`);
   }
 }

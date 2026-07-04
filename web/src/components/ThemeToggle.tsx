@@ -16,6 +16,10 @@ export function ThemeToggle() {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const dark = stored ? stored === 'dark' : prefersDark;
+    // localStorage/matchMedia aren't available during SSR, so the initial
+    // `null` state must be resolved on mount - unavoidable for this
+    // hydration-safe theme-detection pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from localStorage/matchMedia, unavoidable on mount
     setIsDark(dark);
     document.documentElement.classList.toggle('dark', dark);
   }, []);
