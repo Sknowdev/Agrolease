@@ -55,6 +55,10 @@ export function PriceCard({
           <dd className="font-medium">{formatCurrency(highest, country.currencySymbol)}</dd>
         </div>
         <div>
+          <dt className="text-foreground/60">Average (30d)</dt>
+          <dd className="font-medium">{formatCurrency(summary.average, country.currencySymbol)}</dd>
+        </div>
+        <div>
           <dt className="text-foreground/60">Currency</dt>
           <dd className="font-medium">{country.currencyCode}</dd>
         </div>

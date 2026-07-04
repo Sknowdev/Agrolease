@@ -17,6 +17,7 @@ export interface PriceSummary {
   previous: PricePoint | null;
   lowest: number;
   highest: number;
+  average: number;
   history: PricePoint[]; // ascending by date, most recent last
   trendPercent: number | null; // 7-day trend, null if not enough data
 }
@@ -97,6 +98,7 @@ export async function getPriceSummary(
   const values = rows.map((r) => r.priceLocal);
   const lowest = Math.min(...values);
   const highest = Math.max(...values);
+  const average = values.reduce((sum, v) => sum + v, 0) / values.length;
 
   // 7-day trend: compare latest to the row closest to 7 days before latest.
   let trendPercent: number | null = null;
@@ -114,6 +116,7 @@ export async function getPriceSummary(
     previous,
     lowest,
     highest,
+    average,
     history: [...rows].reverse(), // ascending for charting
     trendPercent,
   };
