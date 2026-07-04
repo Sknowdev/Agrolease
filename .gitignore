@@ -1,0 +1,26 @@
+# Environment variables (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js build output (web/ has its own .gitignore too)
+web/.next/
+web/out/
+
+# Scraper
+scraper/node_modules/
+scraper/dist/
+scraper/*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+nul
+
+# Logs
+*.log
+npm-debug.log*

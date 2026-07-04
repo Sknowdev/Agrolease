@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/*
+ * AgroLease design system - green / black / white, per the approved plan.
+ * Kept intentionally small: a handful of CSS variables plus Tailwind utility
+ * classes cover the whole site. Dark mode follows the OS preference and can
+ * also be forced via the .dark class toggled by the ThemeToggle component.
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --surface: #f4f7f4;
+  --border: #e2e8e2;
+
+  --brand-green: #1c3a1f;
+  --brand-green-light: #2f6b34;
+  --brand-accent: #eab308; /* amber, used sparingly for "coming soon" badges */
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f4f7f4;
+  --surface: #121712;
+  --border: #223022;
+
+  --brand-green: #3fae49;
+  --brand-green-light: #5cc766;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-brand-green: var(--brand-green);
+  --color-brand-green-light: var(--brand-green-light);
+  --color-brand-accent: var(--brand-accent);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Visible focus ring everywhere, for keyboard navigation (Task 12 a11y pass) */
+:focus-visible {
+  outline: 2px solid var(--brand-green-light);
+  outline-offset: 2px;
+}

@@ -1,0 +1,21 @@
+{
+  "name": "agrolease-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone commodity price scraper for AgroLease. Runs locally for now; designed to run on an on-demand AWS EC2 instance later.",
+  "type": "module",
+  "scripts": {
+    "scrape:nigeria": "node src/index.js --source=nigeria",
+    "scrape:ghana": "node src/index.js --source=ghana",
+    "scrape:south-africa": "node src/index.js --source=south-africa",
+    "scrape:brazil": "node src/index.js --source=brazil",
+    "scrape:uk": "node src/index.js --source=uk",
+    "scrape:all": "node src/index.js --source=all",
+    "test": "node --test src/**/*.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.5"
+  }
+}
