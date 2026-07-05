@@ -1,18 +1,22 @@
 import { COUNTRIES } from '@/config/countries';
 
 /**
- * Social proof via real, factual metrics rather than fake customers,
- * per the reviewer's suggestion #6.
+ * Credibility section via real, factual metrics rather than fake
+ * customers or testimonials, per the reviewer's suggestion #6 and the
+ * "Launching first in Nigeria" addition.
  */
 export function RoadmapStats() {
   const liveCountries = COUNTRIES.filter((c) => c.live);
-  const comingSoonCountries = COUNTRIES.filter((c) => !c.live);
+  const scraperBackedCount = COUNTRIES.filter((c) => c.priceFeedMethod === 'scraper').length;
   const totalCrops = new Set(COUNTRIES.flatMap((c) => c.crops)).size;
 
   return (
-    <section aria-labelledby="roadmap-heading" className="mt-16 rounded-2xl border border-border bg-surface p-6 sm:p-8">
+    <section
+      aria-labelledby="roadmap-heading"
+      className="mt-16 rounded-2xl border border-border bg-surface p-6 sm:p-8"
+    >
       <h2 id="roadmap-heading" className="text-2xl font-semibold tracking-tight text-center">
-        Building for the markets that need it most
+        Launching First in Nigeria
       </h2>
 
       <div className="mt-6 grid gap-6 sm:grid-cols-3 text-center">
@@ -26,38 +30,20 @@ export function RoadmapStats() {
         </div>
         <div>
           <p className="text-3xl font-bold text-brand-green-light">{liveCountries.length} live</p>
-          <p className="text-sm text-foreground/60 mt-1">Government Price Sources</p>
+          <p className="text-sm text-foreground/60 mt-1">Market Reference Prices</p>
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2">
-        <div>
-          <p className="text-sm font-medium text-foreground/70 mb-2">Live now</p>
-          <ul className="flex flex-wrap gap-2">
-            {liveCountries.map((c) => (
-              <li
-                key={c.code}
-                className="rounded-full bg-brand-green/10 text-brand-green-light px-3 py-1 text-sm"
-              >
-                {c.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="text-sm font-medium text-foreground/70 mb-2">On the roadmap</p>
-          <ul className="flex flex-wrap gap-2">
-            {comingSoonCountries.map((c) => (
-              <li
-                key={c.code}
-                className="rounded-full bg-foreground/5 text-foreground/60 px-3 py-1 text-sm"
-              >
-                {c.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <ul className="mt-8 grid gap-2.5 max-w-md mx-auto text-sm text-foreground/80">
+        <li>🇳🇬 Initial market: Nigeria</li>
+        <li>🌍 Designed for global expansion</li>
+        <li>
+          📈 {scraperBackedCount} of {liveCountries.length} live countries backed by an
+          automated government-data scraper today
+        </li>
+        <li>🔒 Tamper-evident harvest records</li>
+        <li>📱 Mobile-first platform</li>
+      </ul>
     </section>
   );
 }
