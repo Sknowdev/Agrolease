@@ -30,21 +30,22 @@ const PREVIEWS = [
 
 export function PlatformPreview() {
   return (
-    <section aria-labelledby="platform-preview-heading" className="mt-16">
+    <section aria-labelledby="platform-preview-heading" className="mt-24 sm:mt-32">
       <div className="text-center">
-        <h2 id="platform-preview-heading" className="text-2xl font-semibold tracking-tight">
+        <p className="eyebrow">In Development</p>
+        <h2 id="platform-preview-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
           What We&apos;re Building
         </h2>
-        <p className="mt-2 text-sm text-foreground/60 max-w-lg mx-auto">
+        <p className="mt-3 text-foreground/60 max-w-lg mx-auto">
           Layout previews of the AgroLease application, currently in development. Not final
           screenshots.
         </p>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-10 grid gap-5 sm:grid-cols-2">
         {PREVIEWS.map((preview) => (
-          <div key={preview.title} className="rounded-xl border border-border bg-surface p-4">
-            <div className="rounded-lg border border-border bg-background p-4">
+          <div key={preview.title} className="glow-border rounded-2xl bg-surface p-5">
+            <div className="rounded-xl border border-border bg-background p-5">
               <div className="flex gap-1.5 mb-3" aria-hidden="true">
                 <span className="w-2 h-2 rounded-full bg-foreground/20" />
                 <span className="w-2 h-2 rounded-full bg-foreground/20" />

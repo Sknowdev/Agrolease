@@ -14,19 +14,20 @@ const PAIN_POINTS = [
  */
 export function ProblemSection() {
   return (
-    <section aria-labelledby="problem-heading" className="mt-16">
-      <h2 id="problem-heading" className="text-2xl font-semibold tracking-tight">
+    <section aria-labelledby="problem-heading" className="mt-24 sm:mt-32 max-w-2xl">
+      <p className="eyebrow">The Problem</p>
+      <h2 id="problem-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
         Every season, agricultural businesses lose money because of:
       </h2>
-      <ul className="mt-4 space-y-2 text-foreground/80">
+      <ul className="mt-6 space-y-2.5 text-foreground/80 text-lg">
         {PAIN_POINTS.map((point) => (
-          <li key={point} className="flex items-start gap-2">
-            <span className="mt-2 w-1.5 h-1.5 rounded-full bg-foreground/40 shrink-0" aria-hidden="true" />
+          <li key={point} className="flex items-start gap-3">
+            <span className="mt-2.5 w-1.5 h-1.5 rounded-full bg-foreground/40 shrink-0" aria-hidden="true" />
             {point}
           </li>
         ))}
       </ul>
-      <p className="mt-5 font-medium">
+      <p className="mt-6 text-lg font-medium">
         AgroLease replaces fragmented paperwork with one secure system.
       </p>
     </section>

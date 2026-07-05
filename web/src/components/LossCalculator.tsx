@@ -29,9 +29,10 @@ export function LossCalculator() {
   return (
     <section
       aria-labelledby="loss-calculator-heading"
-      className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
+      className="glow-border rounded-2xl bg-surface p-6 sm:p-10"
     >
-      <h2 id="loss-calculator-heading" className="text-2xl font-semibold tracking-tight">
+      <p className="eyebrow">The Cost of Guessing</p>
+      <h2 id="loss-calculator-heading" className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">
         See what a small pricing error actually costs
       </h2>
       <p className="mt-2 text-foreground/70">

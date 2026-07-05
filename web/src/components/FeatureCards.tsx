@@ -33,17 +33,20 @@ const FEATURES = [
 
 export function FeatureCards() {
   return (
-    <section aria-labelledby="features-heading" className="mt-16">
-      <h2 id="features-heading" className="text-2xl font-semibold tracking-tight text-center">
-        Everything in one platform
-      </h2>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section aria-labelledby="features-heading" className="mt-24 sm:mt-32">
+      <div className="text-center">
+        <p className="eyebrow">The Platform</p>
+        <h2 id="features-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+          Everything in one platform
+        </h2>
+      </div>
+      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((feature) => (
-          <div key={feature.title} className="rounded-xl border border-border bg-surface p-5">
+          <div key={feature.title} className="glow-border rounded-2xl bg-surface p-6">
             <span className="text-2xl" aria-hidden="true">
               {feature.icon}
             </span>
-            <h3 className="mt-2 font-semibold">{feature.title}</h3>
+            <h3 className="mt-3 font-semibold">{feature.title}</h3>
             <p className="mt-2 text-sm text-foreground/70">{feature.description}</p>
           </div>
         ))}

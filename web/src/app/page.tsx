@@ -17,10 +17,10 @@ export default function HomePage() {
     <div>
       <HomeHero />
 
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-10">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 py-16 sm:py-20">
         <LivePricesWidget />
         <ProblemSection />
-        <div className="mt-8">
+        <div className="mt-12">
           <LossCalculator />
         </div>
         <HowItWorks />
@@ -32,18 +32,25 @@ export default function HomePage() {
         <RoadmapStats />
         <FaqSection />
 
-        <section aria-labelledby="home-early-access-heading" className="mt-16 mb-16">
-          <h2
-            id="home-early-access-heading"
-            className="text-2xl font-semibold tracking-tight text-center"
-          >
-            Get Early Access
-          </h2>
-          <p className="mt-3 text-foreground/70 max-w-xl mx-auto text-center">
-            Request early access and we&apos;ll notify you as AgroLease launches in your
-            country.
-          </p>
-          <div className="mt-6 max-w-lg mx-auto">
+        <section
+          id="early-access"
+          aria-labelledby="home-early-access-heading"
+          className="mt-24 sm:mt-32 mb-16"
+        >
+          <div className="text-center">
+            <p className="eyebrow">Get Started</p>
+            <h2
+              id="home-early-access-heading"
+              className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight"
+            >
+              Get Early Access
+            </h2>
+            <p className="mt-3 text-foreground/70 max-w-xl mx-auto">
+              Request early access and we&apos;ll notify you as AgroLease launches in your
+              country.
+            </p>
+          </div>
+          <div className="mt-8 max-w-lg mx-auto">
             <EarlyAccessForm sourcePage="/" />
           </div>
         </section>

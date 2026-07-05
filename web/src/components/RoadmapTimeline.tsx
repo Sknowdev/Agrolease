@@ -12,11 +12,14 @@ const STAGES = [
 
 export function RoadmapTimeline() {
   return (
-    <section aria-labelledby="roadmap-timeline-heading" className="mt-16">
-      <h2 id="roadmap-timeline-heading" className="text-2xl font-semibold tracking-tight text-center">
-        Roadmap
-      </h2>
-      <ol className="mt-8 max-w-lg mx-auto space-y-0">
+    <section aria-labelledby="roadmap-timeline-heading" className="mt-24 sm:mt-32">
+      <div className="text-center">
+        <p className="eyebrow">What&apos;s Next</p>
+        <h2 id="roadmap-timeline-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+          Roadmap
+        </h2>
+      </div>
+      <ol className="mt-10 max-w-lg mx-auto space-y-0">
         {STAGES.map((stage, index) => (
           <li key={stage.label} className="relative pl-8 pb-8 last:pb-0">
             {index < STAGES.length - 1 && (

@@ -9,14 +9,17 @@ const BENEFITS = [
 
 export function WhyChooseSection() {
   return (
-    <section aria-labelledby="why-choose-heading" className="mt-16">
-      <h2 id="why-choose-heading" className="text-2xl font-semibold tracking-tight text-center">
-        Why Companies Choose AgroLease
-      </h2>
-      <ul className="mt-6 grid gap-3 sm:grid-cols-2 max-w-xl mx-auto">
+    <section aria-labelledby="why-choose-heading" className="mt-24 sm:mt-32">
+      <div className="text-center">
+        <p className="eyebrow">Why AgroLease</p>
+        <h2 id="why-choose-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+          Why Companies Choose AgroLease
+        </h2>
+      </div>
+      <ul className="mt-8 grid gap-3.5 sm:grid-cols-2 max-w-2xl mx-auto text-lg">
         {BENEFITS.map((benefit) => (
-          <li key={benefit} className="flex items-start gap-2 text-foreground/80">
-            <span className="mt-0.5 text-brand-green-light" aria-hidden="true">
+          <li key={benefit} className="flex items-start gap-3 text-foreground/80">
+            <span className="mt-1 text-brand-green-light" aria-hidden="true">
               ✓
             </span>
             {benefit}

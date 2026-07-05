@@ -62,12 +62,15 @@ export function LivePricesWidget() {
     <section
       id="live-prices"
       aria-labelledby="live-prices-heading"
-      className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
+      className="glow-border rounded-2xl bg-surface p-6 sm:p-10"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="live-prices-heading" className="text-2xl font-semibold tracking-tight">
-          Live Commodity Prices
-        </h2>
+        <div>
+          <p className="eyebrow">Today&apos;s Price</p>
+          <h2 id="live-prices-heading" className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">
+            Live Commodity Prices
+          </h2>
+        </div>
         <Link
           href={`/prices/${country.slug}/${cropSlug}`}
           className="text-sm text-brand-green-light hover:underline"

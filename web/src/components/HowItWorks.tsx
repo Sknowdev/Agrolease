@@ -7,14 +7,17 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section aria-labelledby="how-it-works-heading" className="mt-16">
-      <h2 id="how-it-works-heading" className="text-2xl font-semibold tracking-tight text-center">
-        How AgroLease Works
-      </h2>
-      <ol className="mt-8 grid gap-4 sm:grid-cols-4">
+    <section id="how-it-works" aria-labelledby="how-it-works-heading" className="mt-24 sm:mt-32">
+      <div className="text-center">
+        <p className="eyebrow">The Process</p>
+        <h2 id="how-it-works-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+          How AgroLease Works
+        </h2>
+      </div>
+      <ol className="mt-10 grid gap-4 sm:grid-cols-4">
         {STEPS.map((step, index) => (
           <li key={step.number} className="relative">
-            <div className="rounded-xl border border-border bg-surface p-5 h-full">
+            <div className="glow-border rounded-2xl bg-surface p-5 h-full">
               <span className="inline-flex w-8 h-8 items-center justify-center rounded-full bg-brand-green text-white font-semibold text-sm">
                 {step.number}
               </span>
