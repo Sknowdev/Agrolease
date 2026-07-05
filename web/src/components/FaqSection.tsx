@@ -69,25 +69,27 @@ const FAQS = [
 
 export function FaqSection() {
   return (
-    <section aria-labelledby="faq-heading" className="mt-24 sm:mt-32">
-      <div className="text-center">
-        <p className="eyebrow">Questions</p>
-        <h2 id="faq-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
-          Frequently Asked Questions
-        </h2>
-      </div>
-      <div className="mt-10 max-w-2xl mx-auto divide-y divide-border glow-border rounded-2xl bg-surface">
-        {FAQS.map((faq) => (
-          <details key={faq.question} className="group p-5 sm:p-6">
-            <summary className="flex items-center justify-between gap-3 cursor-pointer font-medium list-none">
-              {faq.question}
-              <span className="text-foreground/40 transition-transform group-open:rotate-45" aria-hidden="true">
-                +
-              </span>
-            </summary>
-            <p className="mt-2.5 text-sm text-foreground/70">{faq.answer}</p>
-          </details>
-        ))}
+    <section aria-labelledby="faq-heading" className="w-full py-20 sm:py-28 bg-surface border-t border-border">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+        <div className="text-center">
+          <p className="eyebrow">Questions</p>
+          <h2 id="faq-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+            Frequently Asked Questions
+          </h2>
+        </div>
+        <div className="mt-10 max-w-2xl mx-auto divide-y divide-border glow-border rounded-2xl bg-background">
+          {FAQS.map((faq) => (
+            <details key={faq.question} className="group p-5 sm:p-6">
+              <summary className="flex items-center justify-between gap-3 cursor-pointer font-medium list-none">
+                {faq.question}
+                <span className="text-foreground/40 transition-transform group-open:rotate-45" aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <p className="mt-2.5 text-sm text-foreground/70">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
       </div>
     </section>
   );

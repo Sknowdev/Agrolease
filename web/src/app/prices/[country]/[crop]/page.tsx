@@ -1,18 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import {
-  getAllPriceRoutes,
-  getCountryBySlug,
-  getCropLabel,
-  COUNTRIES,
-} from '@/config/countries';
+import { getAllPriceRoutes, getCountryBySlug, getCropLabel } from '@/config/countries';
 import { getPriceSummary } from '@/lib/prices';
 import { PriceCard } from '@/components/PriceCard';
 import { PriceUnavailable } from '@/components/PriceUnavailable';
 import { TrendSparkline } from '@/components/TrendSparkline';
 import { PriceHistoryTable } from '@/components/PriceHistoryTable';
-import { LossCalculator } from '@/components/LossCalculator';
+import { PriceSwitcher } from '@/components/PriceSwitcher';
+import { LossExample } from '@/components/LossExample';
 import { FeatureCards } from '@/components/FeatureCards';
 import { RoadmapStats } from '@/components/RoadmapStats';
 import { EarlyAccessForm } from '@/components/EarlyAccessForm';
@@ -42,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     country.live ? 'Regularly' : 'Soon'
   })`;
   const description = country.crops.includes(cropSlug)
-    ? `See today's ${cropLabel.toLowerCase()} price in ${country.name}: average, lowest, highest, and 7-day trend, sourced from ${country.source}.`
+    ? `See today's AgroLease market reference price for ${cropLabel.toLowerCase()} in ${country.name}: average, lowest, highest, and 7-day trend.`
     : `${cropLabel} price tracking for ${country.name} is coming soon to AgroLease.`;
 
   return {
@@ -110,44 +105,13 @@ export default async function PricePage({ params }: PageProps) {
         <PriceUnavailable country={country} cropSlug={cropSlug} />
       )}
 
-      <p className="mt-6 text-sm text-foreground/60">
-        Prices are updated from verified market sources. See {country.source}.
-      </p>
-
-      {/* Country / crop switcher */}
-      <nav aria-label="Browse other prices" className="mt-8 flex flex-wrap gap-2">
-        {country.crops.map((slug) => (
-          <Link
-            key={slug}
-            href={`/prices/${country.slug}/${slug}`}
-            className={`rounded-full px-3 py-1 text-sm border ${
-              slug === cropSlug
-                ? 'border-brand-green bg-brand-green text-white'
-                : 'border-border hover:bg-surface'
-            }`}
-          >
-            {getCropLabel(slug)}
-          </Link>
-        ))}
-      </nav>
-      <nav aria-label="Browse other countries" className="mt-3 flex flex-wrap gap-2">
-        {COUNTRIES.map((c) => (
-          <Link
-            key={c.code}
-            href={`/prices/${c.slug}/${c.crops[0]}`}
-            className={`rounded-full px-3 py-1 text-sm border ${
-              c.slug === country.slug
-                ? 'border-brand-green bg-brand-green text-white'
-                : c.live
-                  ? 'border-border hover:bg-surface'
-                  : 'border-border text-foreground/40'
-            }`}
-          >
-            {c.name}
-            {!c.live && ' (soon)'}
-          </Link>
-        ))}
-      </nav>
+      {/* Country / crop switcher - a small client component with two compact
+          <select> dropdowns instead of a long wall of pill links, so the page
+          doesn't read as a raw sitemap dump. No source name shown anywhere,
+          per the Constitution's "prices are presented as AgroLease market
+          reference prices" rule - no exchange, ministry, or bureau name is
+          ever displayed publicly. */}
+      <PriceSwitcher currentCountrySlug={country.slug} currentCropSlug={cropSlug} />
 
       {/* Marketing funnel underneath the price content, per the approved plan */}
       <section aria-labelledby="stop-guessing-heading" className="mt-16 text-center">
@@ -162,7 +126,7 @@ export default async function PricePage({ params }: PageProps) {
       </section>
 
       <div className="mt-8">
-        <LossCalculator />
+        <LossExample />
       </div>
 
       <FeatureCards />

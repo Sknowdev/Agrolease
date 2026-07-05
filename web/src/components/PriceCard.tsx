@@ -74,16 +74,16 @@ export function PriceCard({
         )}
       </dl>
 
-      {/* Trust-building timestamp + source, per reviewer suggestion #4 */}
-      <div className="mt-6 pt-6 border-t border-border flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-foreground/70">
-        <div>
-          <span className="font-medium text-foreground">Updated:</span>{' '}
-          {formatUpdatedTimestamp(latest.dataDate)}
-        </div>
-        <div>
-          <span className="font-medium text-foreground">Source:</span>{' '}
-          {latest.source ?? country.source}
-        </div>
+      {/*
+       * Trust-building timestamp only. No source/exchange/ministry name is
+       * shown, per the Engineering Constitution's rule: "No exchange name,
+       * government body, or data source is ever displayed in the app or on
+       * the public price page. Prices are presented as AgroLease market
+       * reference prices."
+       */}
+      <div className="mt-6 pt-6 border-t border-border text-sm text-foreground/70">
+        <span className="font-medium text-foreground">Updated:</span>{' '}
+        {formatUpdatedTimestamp(latest.dataDate)}
       </div>
     </section>
   );

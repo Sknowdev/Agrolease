@@ -5,9 +5,10 @@ import Link from 'next/link';
 
 const LINKS = [
   { href: '/#live-prices', label: 'Live Prices' },
+  { href: '/#conduit', label: 'Conduit' },
   { href: '/#how-it-works', label: 'How It Works' },
-  { href: '/prices', label: 'All Countries' },
-  { href: '/early-access', label: 'Early Access' },
+  { href: '/#security', label: 'Security' },
+  { href: '/#early-access', label: 'Get Started' },
 ];
 
 /**

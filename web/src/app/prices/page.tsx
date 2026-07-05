@@ -14,8 +14,8 @@ export default function PricesIndexPage() {
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-10">
       <h1 className="text-3xl font-semibold tracking-tight">Crop Prices by Country</h1>
       <p className="mt-3 text-foreground/70 max-w-2xl">
-        Every price below is updated from a verified market source. Countries marked
-        &quot;coming soon&quot; will go live as their scraper or data source is connected.
+        AgroLease market reference prices, updated regularly. Countries marked
+        &quot;coming soon&quot; will go live as their data feed is connected.
       </p>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">

@@ -17,23 +17,23 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Primary" className="hidden md:flex items-center gap-8 text-sm">
-          <Link href="/#live-prices" className="text-foreground/70 hover:text-foreground transition-colors">
-            Live Prices
+          <Link href="/#conduit" className="text-foreground/70 hover:text-foreground transition-colors">
+            Conduit
           </Link>
           <Link href="/#how-it-works" className="text-foreground/70 hover:text-foreground transition-colors">
             How It Works
           </Link>
-          <Link href="/prices" className="text-foreground/70 hover:text-foreground transition-colors">
-            All Countries
+          <Link href="/#security" className="text-foreground/70 hover:text-foreground transition-colors">
+            Security
           </Link>
         </nav>
 
         <div className="flex items-center gap-3">
           <Link
-            href="/early-access"
+            href="/#early-access"
             className="hidden sm:inline-flex rounded-full bg-brand-green px-4 py-2 text-sm font-semibold text-white hover:bg-brand-green-light transition-colors"
           >
-            Early Access
+            Get Started
           </Link>
           <ThemeToggle />
           <MobileMenu />
