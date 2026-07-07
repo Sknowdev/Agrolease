@@ -29,10 +29,16 @@
   --font-sans: var(--font-inter);
 }
 
-html, body {
-  width: 100%;
-  overflow-x: hidden;
-}
+/*
+ * IMPORTANT: do not set overflow-x (or overflow-y) to anything other
+ * than "visible" on html or body. Doing so breaks position:sticky for
+ * every descendant (including <SiteHeader>) in most browsers - that was
+ * exactly what caused the header to vanish/stop tracking on scroll in a
+ * previous version of this file. If horizontal overflow protection is
+ * ever needed again, apply overflow-hidden locally to the specific
+ * section that needs it (e.g. HomeHero already does this itself, to
+ * clip its decorative background blobs) - never globally on html/body.
+ */
 
 body {
   background: var(--background);

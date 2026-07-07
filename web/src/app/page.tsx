@@ -30,7 +30,7 @@ export default function HomePage() {
       <FaqSection />
 
       <section aria-labelledby="home-cta-heading" className="w-full py-20 sm:py-28 bg-surface border-t border-border">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 text-center">
           <p className="eyebrow">Get Started</p>
           <h2 id="home-cta-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
             Ready to try AgroLease?

@@ -17,7 +17,7 @@ export function HomeHero() {
       <div className="atmos-blob w-[420px] h-[420px] bg-brand-green/10 -top-32 -right-24" />
       <div className="atmos-blob w-[320px] h-[320px] bg-brand-accent/10 -bottom-24 -left-24" />
 
-      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 py-20 sm:py-28 text-center">
+      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 text-center">
         <p className="eyebrow inline-flex items-center gap-2 rounded-full border border-border px-3 py-1">
           <span className="live-dot w-1.5 h-1.5 rounded-full bg-brand-green-light" aria-hidden="true" />
           Now tracking live prices in 5 countries

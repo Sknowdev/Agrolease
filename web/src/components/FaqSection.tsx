@@ -70,7 +70,7 @@ const FAQS = [
 export function FaqSection() {
   return (
     <section aria-labelledby="faq-heading" className="w-full py-20 sm:py-28">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="text-center">
           <p className="eyebrow">Questions</p>
           <h2 id="faq-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
