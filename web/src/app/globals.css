@@ -1,23 +1,13 @@
 @import "tailwindcss";
 
 /*
- * AgroLease design system - green / black / white, per the approved plan.
- * Kept intentionally small: a handful of CSS variables plus Tailwind utility
- * classes cover the whole site. Dark mode follows the OS preference and can
- * also be forced via the .dark class toggled by the ThemeToggle component.
+ * AgroLease design system - a single fixed dark theme (black / white /
+ * green, with a gold accent for primary CTAs). Previously supported a
+ * light/dark toggle; that control was removed per feedback in favor of
+ * one consistent brand look everywhere, so there is no .dark class or
+ * light-mode variant to maintain anymore.
  */
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --surface: #f4f7f4;
-  --border: #e2e8e2;
-
-  --brand-green: #1c3a1f;
-  --brand-green-light: #2f6b34;
-  --brand-accent: #eab308; /* amber, used sparingly for "coming soon" badges */
-}
-
-.dark {
   --background: #0a0a0a;
   --foreground: #f4f7f4;
   --surface: #121712;
@@ -25,6 +15,7 @@
 
   --brand-green: #3fae49;
   --brand-green-light: #5cc766;
+  --brand-accent: #e0b83c; /* gold, used for primary "Get Started" CTAs */
 }
 
 @theme inline {
@@ -36,6 +27,11 @@
   --color-brand-green-light: var(--brand-green-light);
   --color-brand-accent: var(--brand-accent);
   --font-sans: var(--font-inter);
+}
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
