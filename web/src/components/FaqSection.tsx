@@ -69,7 +69,7 @@ const FAQS = [
 
 export function FaqSection() {
   return (
-    <section aria-labelledby="faq-heading" className="w-full py-20 sm:py-28 bg-surface border-t border-border">
+    <section aria-labelledby="faq-heading" className="w-full py-20 sm:py-28">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
         <div className="text-center">
           <p className="eyebrow">Questions</p>
@@ -77,7 +77,7 @@ export function FaqSection() {
             Frequently Asked Questions
           </h2>
         </div>
-        <div className="mt-10 max-w-2xl mx-auto divide-y divide-border glow-border rounded-2xl bg-background">
+        <div className="mt-10 max-w-2xl mx-auto divide-y divide-border glow-border rounded-2xl bg-surface">
           {FAQS.map((faq) => (
             <details key={faq.question} className="group p-5 sm:p-6">
               <summary className="flex items-center justify-between gap-3 cursor-pointer font-medium list-none">
