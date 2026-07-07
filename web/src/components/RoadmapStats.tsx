@@ -29,8 +29,8 @@ export function RoadmapStats() {
             <p className="text-sm text-foreground/60 mt-1">Countries Planned</p>
           </div>
           <div>
-            <p className="text-4xl font-bold text-brand-green-light">{liveCountries.length} live</p>
-            <p className="text-sm text-foreground/60 mt-1">Market Reference Prices</p>
+            <p className="text-4xl font-bold text-brand-green-light">{liveCountries.length}</p>
+            <p className="text-sm text-foreground/60 mt-1">Countries Live Now</p>
           </div>
         </div>
 

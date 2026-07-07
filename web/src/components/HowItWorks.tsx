@@ -14,6 +14,13 @@ export function HowItWorks() {
           <h2 id="how-it-works-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
             How AgroLease Works
           </h2>
+          {/* This 4-step flow describes the full planned platform, not
+              something entirely live today - only step 3 (checking a
+              market price) is real right now. Labeled explicitly so
+              visitors aren't left guessing, per feedback. */}
+          <span className="mt-3 inline-block rounded-full bg-brand-accent/15 text-brand-accent px-3 py-1 text-xs font-semibold">
+            🚧 The full platform - in development
+          </span>
         </div>
         <ol className="mt-10 grid gap-4 sm:grid-cols-4">
           {STEPS.map((step, index) => (
