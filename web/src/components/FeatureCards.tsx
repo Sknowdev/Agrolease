@@ -34,7 +34,7 @@ const FEATURES = [
 export function FeatureCards() {
   return (
     <section aria-labelledby="features-heading" className="w-full py-20 sm:py-28 bg-surface border-t border-border">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="text-center">
           <p className="eyebrow">The Platform</p>
           <h2 id="features-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
