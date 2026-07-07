@@ -112,17 +112,32 @@ export const COUNTRIES: CountryConfig[] = [
     crops: ['wheat'],
   },
 
-  // ===== COMING SOON =====
+  // ===== NOW LIVE - real WFP Global Food Prices scraper =====
+  // Flipped from "coming soon" placeholders to live, scraper-backed
+  // countries after verifying (2026-07-07) that the WFP Global Food
+  // Prices dataset (HDX-hosted, no key required) has real, current,
+  // market-level price data for each of these. See
+  // scraper/src/sources/wfp-food-prices.js for the full source
+  // verification notes and exactly which crops are covered per country -
+  // crop lists below only include what was confirmed present in the
+  // live data, not the originally planned wishlist (e.g. Kenya/Uganda/
+  // Rwanda's "coffee" and Cameroon/Ivory Coast's "cocoa" were dropped -
+  // WFP's food-security-focused collection doesn't track those export
+  // crops in those countries). The previously listed source "KilimoSTAT"
+  // (Kenya) and "WFP VAM" were both replaced - KilimoSTAT was never
+  // actually verified, and WFP's own api.vam.wfp.org/dataviz.vam.wfp.org
+  // endpoints return HTTP 403 on direct request; this is the real,
+  // working HDX-republished path instead.
   {
     code: 'KE',
     slug: 'kenya',
     name: 'Kenya',
     currencyCode: 'KES',
     currencySymbol: 'KSh',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'KilimoSTAT',
-    crops: ['maize', 'coffee'],
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['maize'],
   },
   {
     code: 'ET',
@@ -130,9 +145,9 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Ethiopia',
     currencyCode: 'ETB',
     currencySymbol: 'Br',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
     crops: ['maize', 'coffee'],
   },
   {
@@ -141,9 +156,9 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Tanzania',
     currencyCode: 'TZS',
     currencySymbol: 'TSh',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
     crops: ['maize', 'sorghum'],
   },
   {
@@ -152,10 +167,10 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Uganda',
     currencyCode: 'UGX',
     currencySymbol: 'USh',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['maize', 'coffee'],
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['maize'],
   },
   {
     code: 'RW',
@@ -163,21 +178,10 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Rwanda',
     currencyCode: 'RWF',
     currencySymbol: 'Fr',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['maize', 'coffee'],
-  },
-  {
-    code: 'ZM',
-    slug: 'zambia',
-    name: 'Zambia',
-    currencyCode: 'ZMW',
-    currencySymbol: 'ZK',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['maize', 'groundnuts'],
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['maize'],
   },
   {
     code: 'CM',
@@ -185,10 +189,10 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Cameroon',
     currencyCode: 'XAF',
     currencySymbol: 'Fr',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['cocoa', 'palm-oil'],
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['palm-oil'],
   },
   {
     code: 'CI',
@@ -196,10 +200,10 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Ivory Coast',
     currencyCode: 'XOF',
     currencySymbol: 'Fr',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['cocoa', 'palm-oil'],
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['palm-oil'],
   },
   {
     code: 'SN',
@@ -207,9 +211,9 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Senegal',
     currencyCode: 'XOF',
     currencySymbol: 'Fr',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
     crops: ['groundnuts', 'rice'],
   },
   {
@@ -218,10 +222,63 @@ export const COUNTRIES: CountryConfig[] = [
     name: 'Mozambique',
     currencyCode: 'MZN',
     currencySymbol: 'MT',
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    // "cassava" dropped - not present in Mozambique's WFP data; "maize"
+    // is tracked as "Maize meal" there, which the scraper module maps.
+    crops: ['maize'],
+  },
+  {
+    code: 'EG',
+    slug: 'egypt',
+    name: 'Egypt',
+    currencyCode: 'EGP',
+    currencySymbol: '£',
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['wheat', 'rice'],
+  },
+  {
+    code: 'ML',
+    slug: 'mali',
+    name: 'Mali',
+    currencyCode: 'XOF',
+    currencySymbol: 'Fr',
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['sorghum', 'groundnuts'],
+  },
+  {
+    code: 'BF',
+    slug: 'burkina-faso',
+    name: 'Burkina Faso',
+    currencyCode: 'XOF',
+    currencySymbol: 'Fr',
+    live: true,
+    priceFeedMethod: 'scraper',
+    source: 'WFP Global Food Prices',
+    crops: ['sorghum', 'groundnuts'],
+  },
+
+  // ===== STILL COMING SOON - no verified source found yet =====
+  {
+    code: 'ZM',
+    slug: 'zambia',
+    name: 'Zambia',
+    currencyCode: 'ZMW',
+    currencySymbol: 'ZK',
     live: false,
     priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['maize', 'cassava'],
+    // WFP's 2026 data for Zambia currently has only one commodity
+    // ("Salt") - nothing matching maize or groundnuts yet. Left as
+    // "coming soon" rather than scraping a source with no real crop
+    // data for this country. Re-check scraper/src/sources/wfp-food-prices.js
+    // periodically - WFP may add more Zambia markets/commodities later.
+    source: 'WFP Global Food Prices (no crop data yet)',
+    crops: ['maize', 'groundnuts'],
   },
   {
     code: 'ZW',
@@ -231,41 +288,10 @@ export const COUNTRIES: CountryConfig[] = [
     currencySymbol: '$',
     live: false,
     priceFeedMethod: 'api',
-    source: 'WFP VAM',
+    // Not in the WFP Global Food Prices country list at all (63 countries
+    // covered, Zimbabwe is not one of them) - no verified source found.
+    source: 'Not yet verified',
     crops: ['wheat', 'maize'],
-  },
-  {
-    code: 'EG',
-    slug: 'egypt',
-    name: 'Egypt',
-    currencyCode: 'EGP',
-    currencySymbol: '£',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['wheat', 'rice'],
-  },
-  {
-    code: 'ML',
-    slug: 'mali',
-    name: 'Mali',
-    currencyCode: 'XOF',
-    currencySymbol: 'Fr',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['sorghum', 'groundnuts'],
-  },
-  {
-    code: 'BF',
-    slug: 'burkina-faso',
-    name: 'Burkina Faso',
-    currencyCode: 'XOF',
-    currencySymbol: 'Fr',
-    live: false,
-    priceFeedMethod: 'api',
-    source: 'WFP VAM',
-    crops: ['sorghum', 'groundnuts'],
   },
 ];
 

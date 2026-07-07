@@ -5,6 +5,7 @@ import { scrapeGhana } from './sources/ghana.js';
 import { scrapeSouthAfrica } from './sources/south-africa.js';
 import { scrapeBrazil } from './sources/brazil.js';
 import { scrapeUk } from './sources/uk-defra.js';
+import { makeWfpScraper } from './sources/wfp-food-prices.js';
 
 /**
  * CLI runner for the AgroLease scraper. Dispatches to one source module
@@ -26,6 +27,23 @@ const SOURCES = {
   'south-africa': { label: 'South Africa (admin-entered, no public feed)', run: scrapeSouthAfrica },
   brazil: { label: 'Brazil (admin-entered, no public feed)', run: scrapeBrazil },
   uk: { label: 'United Kingdom (DEFRA)', run: scrapeUk },
+  // Next-wave countries, all backed by the same WFP Global Food Prices
+  // dataset (see sources/wfp-food-prices.js) - one shared CSV download,
+  // one module, real per-country crop mappings verified against the live
+  // data (not every configured crop is covered - see that file's
+  // COUNTRY_CROP_MAP for exactly what is/isn't scraped per country).
+  kenya: { label: 'Kenya (WFP Global Food Prices)', run: makeWfpScraper('KE') },
+  ethiopia: { label: 'Ethiopia (WFP Global Food Prices)', run: makeWfpScraper('ET') },
+  tanzania: { label: 'Tanzania (WFP Global Food Prices)', run: makeWfpScraper('TZ') },
+  uganda: { label: 'Uganda (WFP Global Food Prices)', run: makeWfpScraper('UG') },
+  rwanda: { label: 'Rwanda (WFP Global Food Prices)', run: makeWfpScraper('RW') },
+  cameroon: { label: 'Cameroon (WFP Global Food Prices)', run: makeWfpScraper('CM') },
+  'ivory-coast': { label: 'Ivory Coast (WFP Global Food Prices)', run: makeWfpScraper('CI') },
+  senegal: { label: 'Senegal (WFP Global Food Prices)', run: makeWfpScraper('SN') },
+  mozambique: { label: 'Mozambique (WFP Global Food Prices)', run: makeWfpScraper('MZ') },
+  egypt: { label: 'Egypt (WFP Global Food Prices)', run: makeWfpScraper('EG') },
+  mali: { label: 'Mali (WFP Global Food Prices)', run: makeWfpScraper('ML') },
+  'burkina-faso': { label: 'Burkina Faso (WFP Global Food Prices)', run: makeWfpScraper('BF') },
 };
 
 function printHelp() {

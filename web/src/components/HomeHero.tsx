@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { COUNTRIES } from '@/config/countries';
 
 /**
  * Homepage hero. Wider and bolder than a typical narrow single-column
@@ -12,6 +13,8 @@ import Link from 'next/link';
  * single, uncluttered first impression rather than another form.
  */
 export function HomeHero() {
+  const liveCountryCount = COUNTRIES.filter((c) => c.live).length;
+
   return (
     <section className="relative overflow-hidden border-b border-border">
       <div className="atmos-blob w-[420px] h-[420px] bg-brand-green/10 -top-32 -right-24" />
@@ -20,7 +23,7 @@ export function HomeHero() {
       <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 text-center">
         <p className="eyebrow inline-flex items-center gap-2 rounded-full border border-border px-3 py-1">
           <span className="live-dot w-1.5 h-1.5 rounded-full bg-brand-green-light" aria-hidden="true" />
-          Now tracking live prices in 5 countries
+          Now tracking live prices in {liveCountryCount} countries
         </p>
 
         <h1 className="mt-6 text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05]">

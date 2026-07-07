@@ -28,6 +28,21 @@
 -- general consumer price indices, not commodity market prices. See
 -- web_progress.md.
 --
+-- NOTE ON THE "COMING SOON" WAVE (2026-07-07 update): 11 of these 14
+-- countries were flipped from coming_soon=true / price_feed_method='api'
+-- (with an unverified 'KilimoSTAT' or 'WFP-VAM' source label) to
+-- coming_soon=false / price_feed_method='scraper', after verifying a
+-- real, working, no-key data source: the WFP Global Food Prices dataset,
+-- republished on HDX (data.humdata.org/dataset/global-wfp-food-prices).
+-- "WFP-VAM" was never actually verified - WFP's own api.vam.wfp.org and
+-- dataviz.vam.wfp.org endpoints return HTTP 403 on direct request, and
+-- KilimoSTAT (Kenya) was never checked live either. See
+-- scraper/src/sources/wfp-food-prices.js and web_progress.md for the
+-- full verification notes. Zambia and Zimbabwe remain coming_soon: WFP's
+-- 2026 data for Zambia has no rows for maize/groundnuts yet (only
+-- "Salt"), and Zimbabwe isn't in the WFP Global Food Prices country list
+-- at all - no fabricated source is being claimed for either.
+--
 -- Run this AFTER 0001_init.sql on both staging and production projects.
 
 insert into country_config (
@@ -42,19 +57,21 @@ insert into country_config (
   ('BR', 'Brazil',         'BRL', 'R$', 'admin',  'admin',   'weekly',  'America/Sao_Paulo', -3, 6, true, false),
   ('GB', 'United Kingdom', 'GBP', '£',  'DEFRA',  'scraper', 'monthly', 'Europe/London',   0,    3,  true,  false),
 
-  -- ===== COMING SOON (routes exist, no live data yet) =====
-  ('KE', 'Kenya',          'KES', 'KSh', 'KilimoSTAT', 'api', 'daily',   'Africa/Nairobi',  3, 0, false, true),
-  ('ET', 'Ethiopia',       'ETB', 'Br',  'WFP-VAM',    'api', 'daily',   'Africa/Addis_Ababa', 3, 0, false, true),
-  ('TZ', 'Tanzania',       'TZS', 'TSh', 'WFP-VAM',    'api', 'daily',   'Africa/Dar_es_Salaam', 3, 0, false, true),
-  ('UG', 'Uganda',         'UGX', 'USh', 'WFP-VAM',    'api', 'daily',   'Africa/Kampala',  3, 0, false, true),
-  ('RW', 'Rwanda',         'RWF', 'Fr',  'WFP-VAM',    'api', 'daily',   'Africa/Kigali',   2, 1, false, true),
-  ('ZM', 'Zambia',         'ZMW', 'ZK',  'WFP-VAM',    'api', 'daily',   'Africa/Lusaka',   2, 1, false, true),
-  ('CM', 'Cameroon',       'XAF', 'Fr',  'WFP-VAM',    'api', 'daily',   'Africa/Douala',   1, 2, false, true),
-  ('CI', 'Ivory Coast',    'XOF', 'Fr',  'WFP-VAM',    'api', 'daily',   'Africa/Abidjan',  0, 3, false, true),
-  ('SN', 'Senegal',        'XOF', 'Fr',  'WFP-VAM',    'api', 'daily',   'Africa/Dakar',    0, 3, false, true),
-  ('MZ', 'Mozambique',     'MZN', 'MT',  'WFP-VAM',    'api', 'daily',   'Africa/Maputo',   2, 1, false, true),
-  ('ZW', 'Zimbabwe',       'USD', '$',   'WFP-VAM',    'api', 'daily',   'Africa/Harare',   2, 1, false, true),
-  ('EG', 'Egypt',          'EGP', '£',   'WFP-VAM',    'api', 'daily',   'Africa/Cairo',    2, 1, false, true),
-  ('ML', 'Mali',           'XOF', 'Fr',  'WFP-VAM',    'api', 'daily',   'Africa/Bamako',   0, 3, false, true),
-  ('BF', 'Burkina Faso',   'XOF', 'Fr',  'WFP-VAM',    'api', 'daily',   'Africa/Ouagadougou', 0, 3, false, true)
+  -- ===== NOW LIVE - WFP Global Food Prices (verified 2026-07-07) =====
+  ('KE', 'Kenya',          'KES', 'KSh', 'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Nairobi',  3, 0, true, false),
+  ('ET', 'Ethiopia',       'ETB', 'Br',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Addis_Ababa', 3, 0, true, false),
+  ('TZ', 'Tanzania',       'TZS', 'TSh', 'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Dar_es_Salaam', 3, 0, true, false),
+  ('UG', 'Uganda',         'UGX', 'USh', 'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Kampala',  3, 0, true, false),
+  ('RW', 'Rwanda',         'RWF', 'Fr',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Kigali',   2, 1, true, false),
+  ('CM', 'Cameroon',       'XAF', 'Fr',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Douala',   1, 2, true, false),
+  ('CI', 'Ivory Coast',    'XOF', 'Fr',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Abidjan',  0, 3, true, false),
+  ('SN', 'Senegal',        'XOF', 'Fr',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Dakar',    0, 3, true, false),
+  ('MZ', 'Mozambique',     'MZN', 'MT',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Maputo',   2, 1, true, false),
+  ('EG', 'Egypt',          'EGP', '£',   'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Cairo',    2, 1, true, false),
+  ('ML', 'Mali',           'XOF', 'Fr',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Bamako',   0, 3, true, false),
+  ('BF', 'Burkina Faso',   'XOF', 'Fr',  'WFP-GlobalFoodPrices', 'scraper', 'monthly', 'Africa/Ouagadougou', 0, 3, true, false),
+
+  -- ===== STILL COMING SOON - no verified source found yet =====
+  ('ZM', 'Zambia',         'ZMW', 'ZK',  'WFP-GlobalFoodPrices', 'api', 'daily',   'Africa/Lusaka',   2, 1, false, true),
+  ('ZW', 'Zimbabwe',       'USD', '$',   'unverified', 'api', 'daily',   'Africa/Harare',   2, 1, false, true)
 on conflict (country_code) do nothing;
