@@ -8,9 +8,9 @@ const PAIN_POINTS = [
 
 const STATS = [
   {
-    stat: '30%+',
-    label: 'of all court cases in Nigeria',
-    detail: 'are land disputes, filed every year.',
+    stat: 'Widespread',
+    label: 'land disputes',
+    detail: 'Land disputes remain a significant challenge across many agricultural markets.',
   },
   {
     stat: 'Zero',
@@ -19,16 +19,19 @@ const STATS = [
   },
   {
     stat: 'Years',
-    label: 'in court',
-    detail: 'In India, disputes over underreported harvests and price manipulation take years or decades to resolve.',
+    label: 'to resolve',
+    detail: 'Agricultural disputes can take years to resolve, especially when documentation is incomplete.',
   },
 ];
 
 /**
- * "Sell the pain, not the features." Stats are drawn directly from
- * docs/AGROLEASE_PRODUCT_PLAN_V10.md Section 01 (Nigeria's 30%+ land
- * dispute court-case share; India's multi-year civil court timelines) -
- * not invented figures.
+ * "Sell the pain, not the features." An earlier version of this section
+ * used a specific, hard-to-source figure ("30%+ of all court cases in
+ * Nigeria are land disputes") - if a visitor asked where that number
+ * came from, it couldn't be reliably cited, which weakens credibility
+ * rather than building it. Rewritten with defensible, country-agnostic
+ * statements per feedback: true-in-spirit claims that don't invite a
+ * "source?" question we can't answer.
  */
 export function ProblemSection() {
   return (

@@ -153,6 +153,14 @@ export function EarlyAccessForm({ sourcePage }: { sourcePage?: string }) {
       >
         {status === 'submitting' ? 'Submitting…' : 'Get Early Access'}
       </button>
+
+      {/* Trust line near the submit button, per feedback - a single
+          reassurance sentence like this can measurably increase signup
+          completion. */}
+      <p className="text-xs text-foreground/50">
+        We respect your privacy. We&apos;ll only email you about AgroLease updates and launch
+        announcements.
+      </p>
     </form>
   );
 }
