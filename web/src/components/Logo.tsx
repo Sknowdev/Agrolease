@@ -1,46 +1,49 @@
 /**
- * AgroLease mark: a white "A" (mountain/peak shape) with a green leaf and
- * wave beneath it - recreated as an inline SVG so it's crisp at any size
- * and needs no image request. Matches the provided logo reference
- * (white triangular "A", green gradient leaf curling off its base, green
- * wave beneath).
+ * AgroLease mark: a tall white "A" (two legs meeting at a peak, no
+ * crossbar) with a green gradient leaf curling off its right leg, and a
+ * dark-to-light green wave beneath both - recreated as an inline SVG
+ * (matching the second provided reference image precisely) so it's crisp
+ * at any size and needs no image request.
  */
 export function Logo({ className = 'w-8 h-8' }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 64 64"
-      className={className}
-      role="img"
-      aria-label="AgroLease"
-    >
-      <rect width="64" height="64" rx="14" fill="#0a0a0a" />
-      {/* Wave */}
+    <svg viewBox="0 0 100 100" className={className} role="img" aria-label="AgroLease">
+      <rect width="100" height="100" fill="#000000" />
+
+      {/* Wave: dark green on the left, brightening to match the leaf on the right */}
       <path
-        d="M8 42c6-5 12-5 18 0s12 5 18 0 12-5 18 0v8H8z"
-        fill="#1c3a1f"
+        d="M14 62c10-6 20-6 30 0s20 6 30 0 12-4 16-2v10c-6 4-14 4-20 0s-18-6-28 0-18 6-28-2z"
+        fill="url(#agrolease-wave-gradient)"
       />
-      {/* Leaf */}
+
+      {/* Leaf: light-to-mid green gradient, with a central vein */}
       <path
-        d="M30 34c4-8 12-12 20-11-1 8-6 15-14 17-3 .8-6 .3-8-1a9 9 0 0 1 2-5z"
+        d="M49 56c2-13 12-22 26-23 1 13-6 25-18 29-4 1.3-8 .6-11-1a12 12 0 0 1 3-5z"
         fill="url(#agrolease-leaf-gradient)"
       />
       <path
-        d="M32 38c4-3 9-6 14-8"
-        stroke="#0a0a0a"
-        strokeWidth="1.4"
+        d="M51 58c6-5 13-9 20-12"
+        stroke="#000000"
+        strokeWidth="1.6"
         strokeLinecap="round"
         fill="none"
-        opacity="0.35"
+        opacity="0.4"
       />
-      {/* White "A" / peak */}
+
+      {/* White "A": two legs meeting at a peak, no crossbar */}
       <path
-        d="M24 40 32 16l8 24h-4.2l-1.4-4.4h-4.8L28.2 40z"
+        d="M30 68 49 28l19 40h-9.5l-3-6.2h-13L39.5 68z"
         fill="#ffffff"
       />
+
       <defs>
-        <linearGradient id="agrolease-leaf-gradient" x1="30" y1="34" x2="50" y2="23" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#3fae49" />
-          <stop offset="1" stopColor="#8fd45a" />
+        <linearGradient id="agrolease-leaf-gradient" x1="49" y1="56" x2="75" y2="33" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#3f9d33" />
+          <stop offset="1" stopColor="#9fd63a" />
+        </linearGradient>
+        <linearGradient id="agrolease-wave-gradient" x1="14" y1="62" x2="90" y2="62" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#1f5c22" />
+          <stop offset="1" stopColor="#6bbf3c" />
         </linearGradient>
       </defs>
     </svg>
