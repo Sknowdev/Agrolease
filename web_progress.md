@@ -432,3 +432,114 @@ cannot be set from a `vercel.json` file or from this repo at all. See
 - Vercel's Root Directory setting still needs to be changed in the
   dashboard by the project owner - not something this repo can configure
   remotely (Section 8.6).
+
+
+---
+
+## 9. Zambia/Zimbabwe deep-dive and Yam crop research (2026-07-08)
+
+You asked for two things: (1) find a real source for the last 2
+"coming soon" countries (Zambia, Zimbabwe), or clearly document why not,
+and (2) check whether "Yam" is genuinely tracked by any of our verified
+sources and add it where it is.
+
+### 9.1 Zambia and Zimbabwe: still "coming soon" - 8 sources checked, all rejected
+
+This was not a repeat of the earlier quick check - every candidate below
+was actually downloaded and inspected for real, current, per-crop data
+in this session, not assumed from a dataset's headline description.
+
+| Source | Zambia finding | Zimbabwe finding |
+|---|---|---|
+| WFP Global Food Prices (global 2026 CSV) | Only "Salt" at the current date - no change since the last check | Zero rows - not one of the 63 countries this file covers |
+| WFP's dedicated per-country HDX dataset (`wfp-food-prices-for-zambia` / `-zimbabwe`) | Real data exists, but "Maize (white)" stops 2025-09-15 (~10 months stale) and "Groundnuts (shelled)" stops 2022-02-15 (4+ years stale) | Real data exists, but "Maize" stops 2024-01-15, "Wheat" stops 2017-01-15, "Groundnuts" stops 2018-11-15, "Soybeans" has exactly 1 row ever (2014). Freshest is "Maize meal" (2025-03-15, n=4, aggregate-flag only) - still too thin/stale |
+| World Bank RTFP (global 2026 CSV) | Zero rows | Zero rows |
+| FEWS NET (`fdw.fews.net` API) | Empty response for `country=ZM` | Real, working endpoint (`country=ZW`) with Maize Grain (White), Roller Maize Meal, Sorghum, Wheat Flour columns - but every one stops at 2022-04-30 (4+ years stale) |
+| ZamStats (`zamstats.gov.zm`) | Agriculture page only has historical Crop Forecast Survey files (production volumes/hectares, not prices), newest is the 2022/23 season | n/a |
+| ZIMSTAT (`zimstat.co.zw`) Producer Price Index - Agriculture | n/a | Genuinely fresh (published through April 2026), but it's a base=100 index for the whole "Cereals, legumes and oil seeds" category - no per-crop breakdown at all to extract a maize or wheat figure from. Same category-index limitation as UK/DEFRA, except here there's no per-crop series to combine it with |
+| Zimbabwe Grain Marketing Board (`gmbdura.co.zw/pricing/`) | n/a | Page loads but contains no actual published price figures, just organizational boilerplate |
+| GIEWS FPMA (`fpma.fao.org`) / FAOSTAT API | Both re-confirmed dead ends: FPMA is an Angular SPA with a 404'ing bundle path, FAOSTAT's REST API returns HTTP 401 (auth required) | Same |
+
+**Decision: both countries stay `live: false`, `coming_soon: true`.**
+Every real option is either empty, years out of date, or an aggregate
+index with no per-crop breakdown - presenting any of these as a current
+price would violate the "never claim an untested/broken source works"
+rule this project has followed consistently. This is a deliberate,
+documented non-fix, not an oversight - full source-by-source reasoning
+is inline as code comments in `web/src/config/countries.ts` (search
+"RE-VERIFIED 2026-07-08") and in `supabase/migrations/0002_seed_countries.sql`.
+
+**If you want these two live anyway**, the realistic paths forward are:
+(a) the same manual/admin-entered-price pattern already used for
+Ghana/South Africa/Brazil, or (b) wait for WFP or ZamStats/ZIMSTAT to
+resume active price collection for these countries and re-check
+periodically - neither requires new code, just re-running the same
+verification steps documented above.
+
+### 9.2 Yam: added for Nigeria and Cameroon, excluded for Ivory Coast
+
+Checked every one of our verified sources (WFP Global Food Prices, World
+Bank RTFP, Nigeria's NBS dataset) for a "Yam" commodity:
+
+- **Nigeria** - real, current WFP data: latest date 2026-04-15, 13
+  market readings, average ₦2,962.58 per 2.5 KG, mix of `actual` and
+  `actual,aggregate` price flags. Added.
+- **Cameroon** - real, current WFP data: latest date 2026-03-15, 7
+  market readings, average 758.03 XAF/KG, `actual` flag. Added. (Note:
+  WFP also tracks a separate "Cocoyam (macabo)" item for Cameroon - a
+  different crop, not conflated with yam.)
+- **Ivory Coast** - WFP has a "Yam (florido)" entry, but only **1** data
+  point total at the latest date, flagged `aggregate` only (not
+  `actual`). This is thinner than any other crop currently listed
+  anywhere in `countries.ts`, so it's deliberately excluded rather than
+  quietly included at a lower bar than everything else.
+- **World Bank RTFP**: has a raw `yam` column, but the estimated `c_yam`
+  column (the one this project actually reads and writes - see Section
+  8.2) is only populated for Nigeria (latest 2026-05-01, n=74); Cameroon
+  has no `c_yam` data at all in RTFP. Doesn't change the WFP-based
+  decision above, just confirms RTFP isn't a path to unlock any
+  additional yam coverage.
+- **Nigeria NBS dataset** (`nigeria-nbs.js`): attempted to re-verify
+  whether the NBS Google Drive CSV also tracks yam, but every request to
+  Google Drive's download-confirmation interstitial in this session
+  returned an empty response (likely rate-limiting from repeated
+  requests across sessions). Not resolved - lower priority since WFP
+  already gives Nigeria a verified yam source, so this doesn't block
+  anything. Worth re-checking later if the NBS dataset's yam coverage
+  ever matters (e.g. if you want a second, independent Nigeria yam
+  source).
+
+Changes made:
+- `web/src/config/countries.ts`: added `yam: 'Yam'` to `CROP_LABELS`;
+  added `'yam'` to Nigeria's and Cameroon's `crops` arrays.
+- `scraper/src/sources/wfp-food-prices.js`: added `yam: ['Yam']` to the
+  `COUNTRY_CROP_MAP` entries for `NG` and `CM`.
+- `supabase/migrations/0002_seed_countries.sql`: no data changes needed
+  (crops live in `countries.ts`, not this table) - added an explanatory
+  comment pointing at the code for anyone reading the SQL in isolation.
+
+### 9.3 Verification after these changes
+
+- `npm run lint` (web) - 0 errors.
+- `npm run build` (web) - succeeds, now generates **53** static pages
+  total (up from 51), the +2 being `/prices/nigeria/yam` and
+  `/prices/cameroon/yam`.
+- `npm test` (web, vitest) - 9/9 pass, unchanged (no test touches
+  `countries.ts` directly).
+- `node --test` (scraper) - 15/15 pass, unchanged (no test touches the
+  WFP module's `COUNTRY_CROP_MAP` directly - this is a data-mapping
+  change, not a logic change, so no new automated coverage was added for
+  it specifically, but the module's fetch/parse logic that reads this
+  map is otherwise unchanged and unaffected).
+
+### 9.4 Open items
+
+- Zambia and Zimbabwe remain "coming soon" - no code fix exists to give
+  them a real live price without either fabricating data or falling
+  back to the admin-entered pattern (your call, not made unilaterally
+  here).
+- Nigeria NBS dataset's yam coverage still unverified (Google Drive
+  access issue, low priority - see 9.2).
+- Ivory Coast's thin single-point yam data was deliberately left out;
+  flag if you'd rather include it with an explicit "limited data" caveat
+  instead.
