@@ -122,10 +122,23 @@ export function LivePricesWidget() {
 
           {summary && (
             <div>
-              <p className="text-4xl sm:text-5xl font-bold text-brand-green-light">
-                {formatCurrency(summary.latest.priceLocal, country.currencySymbol)}
-                <span className="text-base font-medium text-foreground/60"> / tonne</span>
-              </p>
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <p className="text-4xl sm:text-5xl font-bold text-brand-green-light">
+                  {formatCurrency(summary.latest.priceLocal, country.currencySymbol)}
+                  <span className="text-base font-medium text-foreground/60"> / tonne</span>
+                </p>
+                {/* Same Reported/Estimated distinction as PriceCard - see
+                    that component for why this is non-negotiable. */}
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    summary.latest.sourceType === 'estimated'
+                      ? 'bg-brand-accent/15 text-brand-accent'
+                      : 'bg-brand-green-light/15 text-brand-green-light'
+                  }`}
+                >
+                  {summary.latest.sourceType === 'estimated' ? 'Estimated' : 'Reported'}
+                </span>
+              </div>
 
               <dl className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div>

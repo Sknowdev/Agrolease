@@ -13,7 +13,7 @@ import { COUNTRIES } from '@/config/countries';
  * single, uncluttered first impression rather than another form.
  */
 export function HomeHero() {
-  const liveCountryCount = COUNTRIES.filter((c) => c.live).length;
+  const trackedCountryCount = COUNTRIES.filter((c) => c.live).length;
 
   return (
     <section className="relative overflow-hidden border-b border-border">
@@ -21,9 +21,19 @@ export function HomeHero() {
       <div className="atmos-blob w-[320px] h-[320px] bg-brand-accent/10 -bottom-24 -left-24" />
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-28 text-center">
+        {/*
+         * Rewritten per feedback: the previous "Now tracking live prices"
+         * wording implied real-time market activity for every one of
+         * these countries, which isn't accurate - several are backed by
+         * monthly WFP survey data or World Bank RTFP's ML-filled weekly
+         * estimates, not a live feed. "Estimated" is honest for both:
+         * WFP's monthly number is itself a survey-period estimate, and
+         * RTFP is explicitly model-estimated. The country count is still
+         * derived from COUNTRIES, never hardcoded.
+         */}
         <p className="eyebrow inline-flex items-center gap-2 rounded-full border border-border px-3 py-1">
           <span className="live-dot w-1.5 h-1.5 rounded-full bg-brand-green-light" aria-hidden="true" />
-          Now tracking live prices in {liveCountryCount} countries
+          Estimated crop prices across {trackedCountryCount} countries
         </p>
 
         <h1 className="mt-6 text-4xl sm:text-6xl font-bold tracking-tight leading-[1.05]">

@@ -10,6 +10,14 @@ export interface PricePoint {
   source: string | null;
   dataDate: string; // ISO date, "YYYY-MM-DD"
   enteredBy: 'scraper' | 'admin';
+  // Added for the Daily/Weekly Price feature. sourceType distinguishes a
+  // real field observation ('reported', the default for all pre-existing
+  // rows) from World Bank RTFP's ML-filled weekly series ('estimated') -
+  // the UI must never show an 'estimated' row with a plain "Live" badge.
+  sourceType: 'reported' | 'estimated';
+  pricePerTonne: number | null; // null when unitType isn't 'weight'
+  unitRaw: string | null;
+  unitType: 'weight' | 'volume' | 'count' | null;
 }
 
 export interface PriceSummary {
@@ -32,6 +40,10 @@ function mapRow(row: {
   source: string | null;
   data_date: string;
   entered_by: 'scraper' | 'admin';
+  source_type?: 'reported' | 'estimated' | null;
+  price_per_tonne?: number | null;
+  unit_raw?: string | null;
+  unit_type?: 'weight' | 'volume' | 'count' | null;
 }): PricePoint {
   return {
     id: row.id,
@@ -43,6 +55,14 @@ function mapRow(row: {
     source: row.source,
     dataDate: row.data_date,
     enteredBy: row.entered_by,
+    // Defaults to 'reported' for any row selected before the
+    // source_type column existed (0003 migration backfills the same
+    // default at the DB level, so this is a belt-and-suspenders fallback
+    // for a client running against an un-migrated database).
+    sourceType: row.source_type ?? 'reported',
+    pricePerTonne: row.price_per_tonne != null ? Number(row.price_per_tonne) : null,
+    unitRaw: row.unit_raw ?? null,
+    unitType: row.unit_type ?? null,
   };
 }
 
@@ -78,7 +98,7 @@ export async function getPriceSummary(
   const { data, error } = await supabase
     .from('commodity_prices')
     .select(
-      'id, country_code, crop_name, price_local, currency_code, price_usd, source, data_date, entered_by'
+      'id, country_code, crop_name, price_local, currency_code, price_usd, source, data_date, entered_by, source_type, price_per_tonne, unit_raw, unit_type'
     )
     .eq('country_code', countryCode.toUpperCase())
     .eq('crop_name', cropName)
