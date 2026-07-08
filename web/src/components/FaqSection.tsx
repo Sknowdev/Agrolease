@@ -1,11 +1,18 @@
+import { COUNTRIES } from '@/config/countries';
+
 /**
  * Ordered by what a visitor arriving from Google search or a grant
  * reviewer would naturally ask first, per feedback - not by how the
  * project was originally documented. "What is AgroLease" and "Who is it
  * for" now lead; the two lower-priority hardware/farm-size questions
  * from the original list are kept but pushed further down.
+ *
+ * The "which countries" answer is built from COUNTRIES at render time
+ * instead of hardcoded here - an earlier hardcoded version went stale
+ * the moment 11 countries were flipped from "coming soon" to live
+ * (Kenya was still listed as "next" here after it was already live).
  */
-const FAQS = [
+const STATIC_FAQS = [
   {
     question: 'What is AgroLease?',
     answer:
@@ -53,12 +60,7 @@ const FAQS = [
   {
     question: 'When is AgroLease launching?',
     answer:
-      'The live price-tracking site is available now for Nigeria, Ghana, South Africa, Brazil, and the UK. The full agreement and settlement platform is in development - join early access to be notified.',
-  },
-  {
-    question: 'Which countries are supported?',
-    answer:
-      'Live pricing today: Nigeria, Ghana, South Africa, Brazil, and the UK. Kenya, India, Indonesia, and the US are next, with more countries already indexed as "coming soon."',
+      'The live price-tracking site is available now for several countries. The full agreement and settlement platform is in development - join early access to be notified.',
   },
   {
     question: 'Do I need an account to view crop prices?',
@@ -68,6 +70,22 @@ const FAQS = [
 ];
 
 export function FaqSection() {
+  const liveCountries = COUNTRIES.filter((c) => c.live).map((c) => c.name);
+  const comingSoonCount = COUNTRIES.filter((c) => !c.live).length;
+
+  const faqs = [
+    ...STATIC_FAQS.slice(0, 9),
+    {
+      question: 'Which countries are supported?',
+      answer:
+        `Live pricing today: ${liveCountries.join(', ')}.` +
+        (comingSoonCount > 0
+          ? ` ${comingSoonCount} more ${comingSoonCount === 1 ? 'country is' : 'countries are'} already indexed as "coming soon."`
+          : ''),
+    },
+    ...STATIC_FAQS.slice(9),
+  ];
+
   return (
     <section aria-labelledby="faq-heading" className="w-full py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -78,7 +96,7 @@ export function FaqSection() {
           </h2>
         </div>
         <div className="mt-10 max-w-2xl mx-auto divide-y divide-border glow-border rounded-2xl bg-surface">
-          {FAQS.map((faq) => (
+          {faqs.map((faq) => (
             <details key={faq.question} className="group p-5 sm:p-6">
               <summary className="flex items-center justify-between gap-3 cursor-pointer font-medium list-none">
                 {faq.question}

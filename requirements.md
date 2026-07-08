@@ -58,6 +58,24 @@ Steps:
    deployment to use staging data, add the staging values as Preview
    environment variables).
 
+### 3.1a Vercel: deploy only `web/`, not the whole repo
+
+Right now Vercel is building the entire repository (including `scraper/`,
+`docs/`, `supabase/`, none of which are part of the actual website). This
+is controlled by a Vercel **dashboard** setting that cannot be set from a
+file in this repo:
+
+1. Open your project on [vercel.com](https://vercel.com) -> **Settings**
+   -> **Build and Deployment**.
+2. Scroll to **Root Directory**.
+3. Click **Edit**, enter `web`, and save.
+4. Redeploy (Vercel will apply this on the next deployment).
+
+A `vercel.json` has been added at the repo root with an `ignoreCommand`
+that skips rebuilding when a commit only touches non-`web/` files (a
+minor optimization) - but the Root Directory setting above is the actual
+fix for "deploy only the web folder."
+
 ### 3.2 Domain / DNS (Spaceship -> Vercel)
 
 Not yet configured. Once you're ready to point `agrolease.xyz` at the

@@ -5,6 +5,9 @@ import { scrapeGhana } from './sources/ghana.js';
 import { scrapeSouthAfrica } from './sources/south-africa.js';
 import { scrapeBrazil } from './sources/brazil.js';
 import { scrapeUk } from './sources/uk-defra.js';
+import { makeWfpScraper } from './sources/wfp-food-prices.js';
+import { makeRtfpScraper } from './sources/rtfp-worldbank.js';
+import { fetchRainfallForAllCountries, COUNTRY_COORDINATES } from './sources/rainfall-openmeteo.js';
 
 /**
  * CLI runner for the AgroLease scraper. Dispatches to one source module
@@ -26,6 +29,36 @@ const SOURCES = {
   'south-africa': { label: 'South Africa (admin-entered, no public feed)', run: scrapeSouthAfrica },
   brazil: { label: 'Brazil (admin-entered, no public feed)', run: scrapeBrazil },
   uk: { label: 'United Kingdom (DEFRA)', run: scrapeUk },
+  // Next-wave countries, all backed by the same WFP Global Food Prices
+  // dataset (see sources/wfp-food-prices.js) - one shared CSV download,
+  // one module, real per-country crop mappings verified against the live
+  // data (not every configured crop is covered - see that file's
+  // COUNTRY_CROP_MAP for exactly what is/isn't scraped per country).
+  kenya: { label: 'Kenya (WFP Global Food Prices)', run: makeWfpScraper('KE') },
+  ethiopia: { label: 'Ethiopia (WFP Global Food Prices)', run: makeWfpScraper('ET') },
+  tanzania: { label: 'Tanzania (WFP Global Food Prices)', run: makeWfpScraper('TZ') },
+  uganda: { label: 'Uganda (WFP Global Food Prices)', run: makeWfpScraper('UG') },
+  rwanda: { label: 'Rwanda (WFP Global Food Prices)', run: makeWfpScraper('RW') },
+  cameroon: { label: 'Cameroon (WFP Global Food Prices)', run: makeWfpScraper('CM') },
+  'ivory-coast': { label: 'Ivory Coast (WFP Global Food Prices)', run: makeWfpScraper('CI') },
+  senegal: { label: 'Senegal (WFP Global Food Prices)', run: makeWfpScraper('SN') },
+  mozambique: { label: 'Mozambique (WFP Global Food Prices)', run: makeWfpScraper('MZ') },
+  egypt: { label: 'Egypt (WFP Global Food Prices)', run: makeWfpScraper('EG') },
+  mali: { label: 'Mali (WFP Global Food Prices)', run: makeWfpScraper('ML') },
+  'burkina-faso': { label: 'Burkina Faso (WFP Global Food Prices)', run: makeWfpScraper('BF') },
+  // World Bank RTFP "estimated" weekly series - written alongside the
+  // WFP monthly "reported" number (source_type distinguishes them), not
+  // replacing it. Only the 9 countries verified to have real RTFP
+  // coverage get an entry here - see sources/rtfp-worldbank.js.
+  'kenya-rtfp': { label: 'Kenya (World Bank RTFP, estimated)', run: makeRtfpScraper('KE') },
+  'nigeria-rtfp': { label: 'Nigeria (World Bank RTFP, estimated)', run: makeRtfpScraper('NG') },
+  'ethiopia-rtfp': { label: 'Ethiopia (World Bank RTFP, estimated)', run: makeRtfpScraper('ET') },
+  'uganda-rtfp': { label: 'Uganda (World Bank RTFP, estimated)', run: makeRtfpScraper('UG') },
+  'cameroon-rtfp': { label: 'Cameroon (World Bank RTFP, estimated)', run: makeRtfpScraper('CM') },
+  'senegal-rtfp': { label: 'Senegal (World Bank RTFP, estimated)', run: makeRtfpScraper('SN') },
+  'mozambique-rtfp': { label: 'Mozambique (World Bank RTFP, estimated)', run: makeRtfpScraper('MZ') },
+  'mali-rtfp': { label: 'Mali (World Bank RTFP, estimated)', run: makeRtfpScraper('ML') },
+  'burkina-faso-rtfp': { label: 'Burkina Faso (World Bank RTFP, estimated)', run: makeRtfpScraper('BF') },
 };
 
 function printHelp() {
@@ -40,23 +73,52 @@ ${Object.entries(SOURCES)
   .join('\n')}
   all            Run every source above, in sequence
 
+  --rainfall     Fetch real daily rainfall (Open-Meteo) for every configured
+                 country and print it - diagnostic only, no DB write yet
+                 (no rainfall table exists - see rainfall-openmeteo.js)
+
 Environment:
   SCRAPER_ENV=production   Write to the production Supabase project instead of staging (default: staging)
 
 Examples:
   node src/index.js --source=nigeria
   node src/index.js --source=all
+  node src/index.js --source=kenya-rtfp
+  node src/index.js --rainfall
   SCRAPER_ENV=production node src/index.js --source=uk
 `);
 }
 
 function parseArgs(argv) {
-  const args = { source: null, help: false };
+  const args = { source: null, help: false, rainfall: false };
   for (const arg of argv) {
     if (arg === '--help' || arg === '-h') args.help = true;
+    else if (arg === '--rainfall') args.rainfall = true;
     else if (arg.startsWith('--source=')) args.source = arg.slice('--source='.length);
   }
   return args;
+}
+
+/**
+ * Rainfall is diagnostic-only for now (prints to stdout, no DB write) -
+ * there is no rainfall_observations table yet (see
+ * sources/rainfall-openmeteo.js's RAINFALL_TABLE_NOTE for why: the
+ * retention window is a product decision, not just a schema one).
+ * `--rainfall` lets you verify the real Open-Meteo integration works
+ * without needing that table to exist first.
+ */
+async function runRainfall() {
+  const codes = Object.keys(COUNTRY_COORDINATES);
+  console.log(`\n=== Fetching rainfall for ${codes.length} countries (diagnostic, no DB write) ===`);
+  const results = await fetchRainfallForAllCountries(codes, { pastDays: 7 });
+  for (const [code, result] of Object.entries(results)) {
+    if (result.error) {
+      console.log(`[${code}] FAILED: ${result.error}`);
+      continue;
+    }
+    const last = result.days[result.days.length - 1];
+    console.log(`[${code}] latest (${last?.date}): ${last?.precipitationMm}mm`);
+  }
 }
 
 async function runOne(key) {
@@ -91,9 +153,19 @@ async function runOne(key) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
-  if (args.help || !args.source) {
+  if (args.help) {
     printHelp();
-    process.exit(args.help ? 0 : 1);
+    process.exit(0);
+  }
+
+  if (args.rainfall) {
+    await runRainfall();
+    return;
+  }
+
+  if (!args.source) {
+    printHelp();
+    process.exit(1);
   }
 
   const keysToRun = args.source === 'all' ? Object.keys(SOURCES) : [args.source];

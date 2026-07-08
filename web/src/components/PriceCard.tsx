@@ -26,14 +26,40 @@ export function PriceCard({
       aria-labelledby="price-heading"
       className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
     >
-      <h1 id="price-heading" className="text-2xl sm:text-3xl font-semibold tracking-tight">
-        Today&apos;s {cropLabel} Price in {country.name}
-      </h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 id="price-heading" className="text-2xl sm:text-3xl font-semibold tracking-tight">
+          Today&apos;s {cropLabel} Price in {country.name}
+        </h1>
+        {/*
+         * Non-negotiable per the Daily/Weekly Price planning doc: a
+         * weekly-changing "estimated" number must never sit next to a
+         * plain "Live" badge, since that implies real-time market
+         * activity these crops don't actually have. "Reported" means a
+         * real field survey; "Estimated" means World Bank RTFP's
+         * ML-filled series between real survey rounds.
+         */}
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            latest.sourceType === 'estimated'
+              ? 'bg-brand-accent/15 text-brand-accent'
+              : 'bg-brand-green-light/15 text-brand-green-light'
+          }`}
+        >
+          {latest.sourceType === 'estimated' ? 'Estimated' : 'Reported'}
+        </span>
+      </div>
 
       <p className="mt-4 text-4xl sm:text-5xl font-bold text-brand-green-light">
         {formatCurrency(latest.priceLocal, country.currencySymbol)}
         <span className="text-lg font-medium text-foreground/60"> / tonne</span>
       </p>
+
+      {latest.sourceType === 'estimated' && (
+        <p className="mt-1 text-xs text-foreground/60">
+          Estimated — updated weekly, based on WFP survey data with gap-filling between
+          reporting periods.
+        </p>
+      )}
 
       {trendLabel && (
         <p

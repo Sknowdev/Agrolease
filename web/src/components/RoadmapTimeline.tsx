@@ -1,16 +1,30 @@
-/**
- * Simple launch-sequence timeline using the real, currently-configured
- * rollout (see web/src/config/countries.ts and web_progress.md) rather
- * than a generic example sequence - Kenya/India/Indonesia/US are the
- * actual next wave (API keys pending), not a placeholder list.
- */
-const STAGES = [
-  { label: 'Live now', countries: '🇳🇬 Nigeria · 🇬🇭 Ghana · 🇿🇦 South Africa · 🇧🇷 Brazil · 🇬🇧 UK' },
-  { label: 'Next wave', countries: '🇰🇪 Kenya · 🇮🇳 India · 🇮🇩 Indonesia · 🇺🇸 United States' },
-  { label: 'On the roadmap', countries: '14 more countries across Africa, already indexed' },
-];
+import { COUNTRIES } from '@/config/countries';
 
+/**
+ * Driven directly from COUNTRIES (web/src/config/countries.ts) instead
+ * of a hand-written country list. An earlier hardcoded version of this
+ * component went stale the moment 11 countries were flipped from
+ * "coming soon" to live (2026-07-07, after verifying the WFP Global
+ * Food Prices source) - Kenya in particular was still listed as "next
+ * wave" here after it was already live. Deriving this from the real
+ * config means it can never drift out of sync again.
+ */
 export function RoadmapTimeline() {
+  const liveCountries = COUNTRIES.filter((c) => c.live);
+  const comingSoonCountries = COUNTRIES.filter((c) => !c.live);
+
+  const STAGES = [
+    { label: 'Live now', countries: liveCountries.map((c) => c.name).join(' · ') },
+    ...(comingSoonCountries.length > 0
+      ? [
+          {
+            label: 'Coming soon',
+            countries: `${comingSoonCountries.map((c) => c.name).join(' · ')} - routes already indexed`,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <section aria-labelledby="roadmap-timeline-heading" className="w-full py-20 sm:py-28 bg-surface border-t border-border">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">

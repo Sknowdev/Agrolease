@@ -276,3 +276,159 @@ everything is finished:
   Brazil downgrade)
 - `requirements.md` (new)
 - `web_progress.md` (this file)
+
+
+---
+
+## 8. Daily/Weekly Price feature - rainfall, RTFP, and honesty fixes (2026-07-08)
+
+Picking up from the planning doc's open questions. This section resolves
+them with real, verified answers rather than assumptions.
+
+### 8.1 Open-Meteo rainfall - verified, wired in as a diagnostic
+
+Confirmed live: `api.open-meteo.com/v1/forecast` with the `past_days`
+parameter returns real daily `precipitation_sum` (mm) for any lat/lon,
+no key, globally (tested against all 19 configured countries, including
+Zambia/Zimbabwe which have no price scraper at all yet).
+
+New module: `scraper/src/sources/rainfall-openmeteo.js`, with one
+representative coordinate per country. Wired into the CLI as
+`node src/index.js --rainfall` - this is **diagnostic-only for now**
+(prints to stdout, does not write to Supabase), because there is no
+`rainfall_observations` table yet. Deciding the retention window (how
+many days of history to keep) is a product decision, not just a schema
+one, so that migration is intentionally not included here - flag this to
+decide before wiring it to write real rows.
+
+### 8.2 World Bank RTFP - all open questions resolved with real checks
+
+1. **Resource URL**: the World Bank's own `microdata.worldbank.org` NADA
+   catalog exposes rich metadata via a working REST API
+   (`/index.php/api/catalog/<idno>`), including a genuinely useful
+   per-country/per-commodity `ticker_info` breakdown - but its actual
+   CSV download endpoint never worked in this environment across several
+   different URL patterns tried (all 404'd or returned 0 bytes). The
+   **real, working path** is the same dataset republished on HDX:
+   `data.humdata.org/dataset/global-real-time-food-prices` - identical
+   no-auth CSV-per-year pattern to the existing WFP module.
+2. **Country coverage**: checked directly by counting rows per ISO3 in
+   the live 2026 file, not assumed from the "40 countries" headline.
+   RTFP covers **9 of our 14** target countries: Nigeria, Kenya,
+   Ethiopia, Uganda, Cameroon, Senegal, Mozambique, Mali, Burkina Faso.
+   It does **not** cover Ghana, South Africa, Brazil, Tanzania, Rwanda,
+   Zambia, Ivory Coast, Zimbabwe, or Egypt.
+3. **Unit format**: confirmed NOT already per-tonne. Units live in a
+   per-row `components` string (e.g. `"maize_flour (2.1 KG, Index
+   Weight = 0.48)"`) and vary per country/commodity - exactly why
+   `price-normalize.js` exists.
+4. **Crop overlap**: verified per-country. Two real gaps found and left
+   honest rather than faked: **Senegal and Burkina Faso do not track
+   groundnuts in RTFP at all** (not in their commodity list), even
+   though `country_config` lists groundnuts as a crop for both - the new
+   module simply skips writing a groundnuts row for them.
+5. **RTFP vs WFP relationship**: implemented as "alongside", per the
+   doc's leaning - `source_type` distinguishes them
+   (`'reported'` for the existing monthly WFP module, `'estimated'` for
+   RTFP), both write to the same `commodity_prices` table, neither
+   overwrites the other.
+6. **Fallback for WFP-without-RTFP countries**: no special handling
+   needed - those countries simply never get an `'estimated'` row, and
+   the UI's Reported/Estimated badge only ever reflects what's actually
+   in the DB for the latest date.
+
+**A key data-shape discovery, verified not assumed**: RTFP's raw
+commodity columns (e.g. `maize`) are genuinely sparse - populated only
+in the months a real survey happened for that specific market. The
+`c_`-prefixed columns (e.g. `c_maize`) are the ML close-price series,
+populated for every market every month. This module reads the `c_`
+column and labels it `'estimated'` - this is the real mechanism behind
+the "Estimated - updated weekly... with gap-filling" language the
+planning doc specified, confirmed against actual data rather than taken
+on faith from the dataset's description.
+
+New module: `scraper/src/sources/rtfp-worldbank.js`. Wired into the CLI
+as `--source=kenya-rtfp`, `--source=nigeria-rtfp`, etc. (9 new source
+keys, one per covered country), all included in `--source=all`.
+
+### 8.3 Price-per-tonne normalization
+
+New `scraper/src/lib/price-normalize.js`: `toPricePerTonne(price, unit)`
+and `classifyUnitType(unit)`, exactly matching the planning doc's
+crop-agnostic, ingest-time approach. 15 unit tests
+(`price-normalize.test.js`, run via `node --test`) covering bare `KG`,
+prefixed weights (`2.5 KG`, `90 KG`), grams, non-weight units (`L`,
+`Loaf`, `Bunch`, `pcs`) correctly returning `null` rather than a guessed
+conversion, and malformed/empty unit strings.
+
+`writeCommodityPrice()` in `priceWriter.js` now accepts optional
+`sourceType`, `pricePerTonne`, `unitRaw`, `unitType` parameters, all
+defaulting to the pre-existing "reported, no normalization" behavior -
+every existing scraper module (Nigeria NBS, UK DEFRA, WFP) continues to
+work completely unchanged.
+
+New migration: `supabase/migrations/0003_add_price_normalization_columns.sql`
+(+ rollback) adds `source_type` (default `'reported'`, check constraint),
+`price_per_tonne`, `unit_raw`, `unit_type` to `commodity_prices`. Existing
+rows get safe defaults, no backfill needed.
+
+### 8.4 Web app: Reported/Estimated badge
+
+`web/src/lib/prices.ts`'s `PricePoint`/`mapRow` now carry the four new
+fields (defaulting to `'reported'` client-side too, for safety against
+an un-migrated database). `PriceCard.tsx` and `LivePricesWidget.tsx` both
+now render an explicit "Reported" or "Estimated" badge next to the
+price - per the planning doc's non-negotiable rule, a weekly-changing
+estimated number is never shown next to a plain "Live" badge. The
+"Estimated" state also shows the exact suggested copy: *"Estimated —
+updated weekly, based on WFP survey data with gap-filling between
+reporting periods."*
+
+### 8.5 Removed the hardcoded "5 countries" claim
+
+`HomeHero.tsx`'s badge previously read "Now tracking live prices in {N}
+countries" - rewritten to "Estimated crop prices across {N} countries"
+per feedback: several of these countries are backed by monthly survey
+data or RTFP's model estimates, not a live feed, so "live" over-claimed
+freshness. The country count itself was already derived from
+`COUNTRIES` (not hardcoded) as of the previous session's fix - only the
+wording changed here.
+
+### 8.6 Vercel: deploying the whole repo instead of just `web/`
+
+Added a root `vercel.json` with an `ignoreCommand` that skips a build
+when the diff between the last two commits touches nothing under `web/`
+- a real optimization, but **not** the actual fix for "deploy only
+`web/`". That specific behavior is controlled by Vercel's **Root
+Directory** project setting, which lives only in the Vercel dashboard
+(Project -> Settings -> Build and Deployment -> Root Directory) and
+cannot be set from a `vercel.json` file or from this repo at all. See
+`requirements.md` for the exact steps.
+
+### 8.7 Testing checklist status (from the planning doc)
+
+- [x] `npm run lint` - 0 errors
+- [x] `npm run build` - succeeds (51 pages)
+- [x] `npm test` (web) - 9/9 pass
+- [x] `node --test` (scraper) - 15/15 pass, covering `toPricePerTonne()`
+      edge cases (bare `KG`, non-weight units, malformed strings)
+- [x] Standalone smoke test per new source:
+  - Open-Meteo (`--rainfall`): real HTTP calls, real parsed rainfall
+    values, for all 19 countries, completed successfully end-to-end (no
+    DB write needed, so no credential blocker at all)
+  - RTFP (`--source=kenya-rtfp` and a direct `scrapeRtfpCountries()`
+    call): real HTTP fetch, real CSV parse, reached the actual
+    `writeCommodityPrice()` call before failing only on the expected
+    "no Supabase credentials in this sandbox" error - the same
+    verification pattern already established for the WFP module
+
+### 8.8 Open items
+
+- No `rainfall_observations` table yet - rainfall is diagnostic-only
+  until the retention-window decision is made (Section 8.1).
+- RTFP data has not been written to a real Supabase database - same
+  blocker as every other scraper module, needs real credentials
+  (`requirements.md` Section 3.1).
+- Vercel's Root Directory setting still needs to be changed in the
+  dashboard by the project owner - not something this repo can configure
+  remotely (Section 8.6).

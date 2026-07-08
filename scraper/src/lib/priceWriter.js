@@ -14,11 +14,35 @@ import { getSupabaseClient } from './supabaseClient.js';
  * @param {string} price.currencyCode  e.g. "NGN"
  * @param {string} price.dataDate      ISO date string, "YYYY-MM-DD"
  * @param {string} price.source        human-readable source name, e.g. "FMARD"
+ * @param {'reported'|'estimated'} [price.sourceType] "reported" (default) for
+ *        real field observations, "estimated" for ML-filled series like
+ *        World Bank RTFP - drives which trust badge the UI renders.
+ * @param {number|null} [price.pricePerTonne] normalized price-per-tonne,
+ *        from lib/price-normalize.js's toPricePerTonne() - null when the
+ *        unit isn't weight-based (never a guessed conversion).
+ * @param {string|null} [price.unitRaw] the unit exactly as reported, e.g. "2.5 KG"
+ * @param {'weight'|'volume'|'count'|null} [price.unitType] from classifyUnitType()
  * @returns {Promise<{ inserted: boolean, reason?: string }>}
  */
 export async function writeCommodityPrice(price) {
   const supabase = getSupabaseClient();
-  const { countryCode, cropName, priceLocal, currencyCode, dataDate, source } = price;
+  const {
+    countryCode,
+    cropName,
+    priceLocal,
+    currencyCode,
+    dataDate,
+    source,
+    // Added for the Daily/Weekly Price feature (2026-07-07): source_type
+    // distinguishes real field observations ('reported', the default -
+    // every existing scraper module keeps working unchanged) from
+    // World Bank RTFP's ML-filled weekly estimates ('estimated'). See
+    // supabase/migrations/0003_add_price_normalization_columns.sql.
+    sourceType = 'reported',
+    pricePerTonne = null,
+    unitRaw = null,
+    unitType = null,
+  } = price;
 
   const { data: latest, error: fetchError } = await supabase
     .from('commodity_prices')
@@ -56,6 +80,10 @@ export async function writeCommodityPrice(price) {
     source,
     data_date: dataDate,
     entered_by: 'scraper',
+    source_type: sourceType,
+    price_per_tonne: pricePerTonne,
+    unit_raw: unitRaw,
+    unit_type: unitType,
   });
 
   if (insertError) {
