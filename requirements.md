@@ -32,31 +32,52 @@ to run this project locally.
 
 ### 3.1 Supabase credentials (required to see real data)
 
-You mentioned staging and production Supabase projects already exist and
-are linked to the GitHub repo, but empty. Nothing in this repo can write
-or read real data until you provide:
+**UPDATE 2026-07-09:** the plan below originally assumed two separate
+Supabase projects (staging + production). The user confirmed on
+2026-07-09 that **only one real Supabase project actually exists**
+(`ovfopqzjneuxxtyxmiri.supabase.co`) - there is no separate staging
+project. Until a second project is created, "staging" and "production"
+both point at this same single project. This is a real, current risk to
+be aware of: **there is no safety net** - any scraper run or manual edit
+against "production" is also directly editing the only database the
+live site reads from, with no way to test against a throwaway copy
+first. Treat this as a temporary state, not a permanent decision - see
+Section 5.4 below.
+
+Concretely, this means:
+- The scraper's `SCRAPER_ENV=production` flag is currently a no-op: both
+  the plain (`SUPABASE_URL`) and `_PRODUCTION`-suffixed env vars resolve
+  to the exact same project, so running with or without that flag writes
+  to the identical database either way.
+- Schema (all 3 migrations) and full scraper data have already been
+  applied here as of 2026-07-08/09 - see `web_progress.md` for the exact
+  row counts written.
 
 | Value | Where to find it | Used by |
 |---|---|---|
-| `SUPABASE_URL` (staging) | Supabase dashboard -> Project Settings -> API -> Project URL | scraper (local `.env`) |
-| `SUPABASE_SERVICE_ROLE_KEY` (staging) | Same page -> `service_role` secret | scraper (local `.env`) |
-| `NEXT_PUBLIC_SUPABASE_URL` (staging) | Same Project URL | web app (`web/.env.local`) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` (staging) | Same page -> `anon` `public` key | web app (`web/.env.local`) |
-| Same 4 values again, for the **production** project | Production project's own Settings -> API page | Vercel Production environment variables + `SCRAPER_ENV=production` runs |
+| `SUPABASE_URL` | Supabase dashboard -> Project Settings -> API -> Project URL | scraper (local `.env`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Same page -> `service_role` secret | scraper (local `.env`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Same Project URL | web app (`web/.env.local`), Vercel env vars |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same page -> `anon` / `publishable` key | web app (`web/.env.local`), Vercel env vars |
 
-Steps:
-1. Copy `.env.example` (repo root) to `.env` and fill in the staging
-   values, for the scraper.
-2. Copy `web/.env.example` to `web/.env.local` and fill in the staging
+Steps (already done once against the one real project, kept here for
+reference / for if you create a true second project later):
+1. Copy `.env.example` (repo root) to `.env` and fill in the values, for
+   the scraper.
+2. Copy `web/.env.example` to `web/.env.local` and fill in the
    `NEXT_PUBLIC_*` values, for the web app.
-3. In the Supabase SQL editor for **both** the staging and production
-   projects, run in order:
+3. In the Supabase SQL editor, run in order:
    - `supabase/migrations/0001_init.sql`
    - `supabase/migrations/0002_seed_countries.sql`
-4. In Vercel's project settings, add the production `NEXT_PUBLIC_*`
-   values as Production environment variables (and, if you want a preview
-   deployment to use staging data, add the staging values as Preview
-   environment variables).
+   - `supabase/migrations/0003_add_price_normalization_columns.sql`
+4. In Vercel's project settings, add the `NEXT_PUBLIC_*` values as
+   Production environment variables.
+
+**If/when you create a real second (staging) project later:** repeat
+steps 1-4 against it with its own credentials, then the
+`SCRAPER_ENV=production` flag will actually mean something again, and
+you'll be able to test scraper/schema changes there before touching the
+live database.
 
 ### 3.1a Vercel: deploy only `web/`, not the whole repo
 
@@ -137,3 +158,15 @@ should be aware of (full reasoning in `web_progress.md`):
    Brazil are "live" in the sense that their pages are real and
    indexable, but their prices need to be entered by hand (there's no
    admin panel built yet - see Open Items in `web_progress.md`).
+
+### 5.4 Only one real Supabase project exists (no staging safety net)
+
+Confirmed with the user 2026-07-09: there is currently one Supabase
+project total, doing double duty as both "staging" and "production."
+Every scraper run and schema change made so far has gone directly
+against the database the live site reads from. This isn't a blocker -
+the site works - but it means there's currently no way to test a risky
+migration or a new scraper source without it immediately affecting
+production data. Worth creating a real second project before making any
+future change that isn't already verified safe (e.g. a schema migration
+that drops/renames a column).
