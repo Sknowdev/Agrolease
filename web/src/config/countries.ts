@@ -41,6 +41,14 @@ export const CROP_LABELS: Record<string, string> = {
   coffee: 'Coffee',
   'palm-oil': 'Palm Oil',
   ginger: 'Ginger',
+  // Added 2026-07-08 after verifying real, current WFP Global Food Prices
+  // data exists for this crop in Nigeria and Cameroon (see COUNTRY_CROP_MAP
+  // in scraper/src/sources/wfp-food-prices.js for exact figures/dates).
+  // Ivory Coast also has a "Yam (florido)" reading in the same dataset but
+  // it's a single aggregate-flagged data point - too thin to include by
+  // the same standard already applied elsewhere in this file, so it's
+  // deliberately left out.
+  yam: 'Yam',
 };
 
 export const COUNTRIES: CountryConfig[] = [
@@ -60,7 +68,10 @@ export const COUNTRIES: CountryConfig[] = [
     // two crops are intentionally left out here rather than faked - see
     // web_progress.md.
     source: 'NBS Food Price Tracking (National Bureau of Statistics)',
-    crops: ['maize', 'rice', 'sorghum', 'soybeans'],
+    // "yam" is served from the WFP Global Food Prices scraper (not the
+    // NBS dataset above, which doesn't track it) - see
+    // scraper/src/sources/wfp-food-prices.js COUNTRY_CROP_MAP.NG.
+    crops: ['maize', 'rice', 'sorghum', 'soybeans', 'yam'],
   },
   {
     code: 'GH',
@@ -192,7 +203,11 @@ export const COUNTRIES: CountryConfig[] = [
     live: true,
     priceFeedMethod: 'scraper',
     source: 'WFP Global Food Prices',
-    crops: ['palm-oil'],
+    // "yam" added 2026-07-08 - real data verified (see CROP_LABELS note
+    // above). Note WFP also tracks a distinct "Cocoyam (macabo)" item for
+    // Cameroon - that is a different crop and is intentionally not mapped
+    // to "yam" here.
+    crops: ['palm-oil', 'yam'],
   },
   {
     code: 'CI',
@@ -272,12 +287,27 @@ export const COUNTRIES: CountryConfig[] = [
     currencySymbol: 'ZK',
     live: false,
     priceFeedMethod: 'api',
-    // WFP's 2026 data for Zambia currently has only one commodity
-    // ("Salt") - nothing matching maize or groundnuts yet. Left as
-    // "coming soon" rather than scraping a source with no real crop
-    // data for this country. Re-check scraper/src/sources/wfp-food-prices.js
-    // periodically - WFP may add more Zambia markets/commodities later.
-    source: 'WFP Global Food Prices (no crop data yet)',
+    // RE-VERIFIED 2026-07-08, exhaustively, before accepting "coming
+    // soon" as final for now. Every source checked either has no data,
+    // stale data, or index-only (non-per-crop) data:
+    //   - WFP Global Food Prices (global 2026 CSV): only "Salt" for
+    //     Zambia at the current date, still true as of this re-check.
+    //   - WFP's dedicated "Zambia - Food Prices" HDX dataset (a
+    //     country-specific extract, last_modified 2026-05-24 - looked
+    //     promising): real historical data exists, but "Maize (white)"
+    //     stops at 2025-09-15 (~10 months stale) and "Groundnuts
+    //     (shelled)" stops at 2022-02-15 (4+ years stale, effectively
+    //     dead). Too stale to present as current.
+    //   - World Bank RTFP (global 2026 CSV): zero rows for Zambia at all.
+    //   - FEWS NET (fdw.fews.net API): no Zambia data returned for the
+    //     staple-food-price dataset (empty response for country=ZM).
+    //   - ZamStats (zamstats.gov.zm) agriculture page: only historical
+    //     Crop Forecast Survey files (production volumes, not prices),
+    //     newest is 2022/23 season.
+    // Left honestly as "coming soon" rather than presenting stale or
+    // production-only data as a live price. Re-check periodically -
+    // WFP may resume active Zambia collection.
+    source: 'Not yet verified (see code comment - 5 sources checked, all stale or empty)',
     crops: ['maize', 'groundnuts'],
   },
   {
@@ -288,9 +318,36 @@ export const COUNTRIES: CountryConfig[] = [
     currencySymbol: '$',
     live: false,
     priceFeedMethod: 'api',
-    // Not in the WFP Global Food Prices country list at all (63 countries
-    // covered, Zimbabwe is not one of them) - no verified source found.
-    source: 'Not yet verified',
+    // RE-VERIFIED 2026-07-08, exhaustively, before accepting "coming
+    // soon" as final for now. Every source checked either has no data,
+    // stale data, or index-only (non-per-crop) data:
+    //   - WFP Global Food Prices (global 2026 CSV): zero rows for
+    //     Zimbabwe (not one of the 63 countries covered).
+    //   - WFP's dedicated "Zimbabwe - Food Prices" HDX dataset
+    //     (country-specific extract, last_modified 2026-05-24): real
+    //     historical data exists, but "Maize" stops 2024-01-15, "Wheat"
+    //     stops 2017-01-15, "Groundnuts (shelled)" stops 2018-11-15,
+    //     "Soybeans" has exactly 1 row ever (2014), "Sorghum" stops
+    //     2018-12-15. The freshest item is "Maize meal" at 2025-03-15,
+    //     but with only 4 readings and an "aggregate"-only price flag -
+    //     still too old/thin to present as a current price.
+    //   - World Bank RTFP (global 2026 CSV): zero rows for Zimbabwe.
+    //   - FEWS NET (fdw.fews.net API, country=ZW): a real, working
+    //     endpoint - has Maize Grain (White), Roller Maize Meal,
+    //     Sorghum, and Wheat Flour columns, but every one of them stops
+    //     at 2022-04-30 (4+ years stale).
+    //   - ZIMSTAT (zimstat.co.zw) Producer Price Index - Agriculture:
+    //     genuinely fresh (files published through April 2026), but it
+    //     is a base=100 index for the whole "Cereals, legumes and oil
+    //     seeds" category, not a per-crop price - same limitation as
+    //     the UK/DEFRA source, and here there's no per-crop breakdown
+    //     at all to combine it with.
+    //   - Grain Marketing Board (gmbdura.co.zw) /pricing/ page: no
+    //     published price figures found in the page content, just
+    //     organizational boilerplate.
+    // Left honestly as "coming soon" rather than presenting stale or
+    // index-only data as a live price. Re-check periodically.
+    source: 'Not yet verified (see code comment - 6 sources checked, all stale, empty, or index-only)',
     crops: ['wheat', 'maize'],
   },
 ];

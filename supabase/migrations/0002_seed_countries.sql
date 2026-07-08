@@ -38,10 +38,28 @@
 -- dataviz.vam.wfp.org endpoints return HTTP 403 on direct request, and
 -- KilimoSTAT (Kenya) was never checked live either. See
 -- scraper/src/sources/wfp-food-prices.js and web_progress.md for the
--- full verification notes. Zambia and Zimbabwe remain coming_soon: WFP's
--- 2026 data for Zambia has no rows for maize/groundnuts yet (only
--- "Salt"), and Zimbabwe isn't in the WFP Global Food Prices country list
--- at all - no fabricated source is being claimed for either.
+-- full verification notes.
+--
+-- NOTE ON ZAMBIA/ZIMBABWE (re-verified 2026-07-08, still coming_soon):
+-- exhaustively re-checked 8 candidate sources across both countries -
+-- WFP global CSV, WFP's own dedicated per-country HDX datasets
+-- (wfp-food-prices-for-zambia / -zimbabwe), World Bank RTFP, the FEWS
+-- NET fdw.fews.net API, ZamStats, ZIMSTAT's Producer Price Index -
+-- Agriculture, and Zimbabwe's Grain Marketing Board site. Every one is
+-- either empty for these two countries, years-stale (Zambia groundnuts
+-- last updated 2022; Zimbabwe maize/wheat/soybeans/sorghum all stale,
+-- FEWS NET stopped 2022-04), or an aggregate index with no per-crop
+-- breakdown (ZIMSTAT PPIA). None meet the bar for a genuinely current,
+-- per-crop price, so both stay coming_soon rather than present stale or
+-- index-only figures as live. Full detail in web/src/config/countries.ts
+-- and web_progress.md.
+--
+-- NOTE ON YAM (added 2026-07-08): verified real, current WFP Global Food
+-- Prices data for "Yam" in Nigeria and Cameroon - see
+-- web/src/config/countries.ts CROP_LABELS comment and
+-- scraper/src/sources/wfp-food-prices.js for exact figures. No SQL
+-- changes needed here since crops are stored in web/src/config/
+-- countries.ts, not in this table.
 --
 -- Run this AFTER 0001_init.sql on both staging and production projects.
 

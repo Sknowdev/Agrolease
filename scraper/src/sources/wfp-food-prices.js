@@ -31,6 +31,14 @@ import { writeCommodityPrice } from '../lib/priceWriter.js';
  * below only includes mappings that were verified present in the actual
  * CSV - unmapped crops are not scraped by this module and stay on
  * whatever fallback (admin-entered or "coming soon") applies.
+ *
+ * YAM (added 2026-07-08): checked every country in this dataset for a
+ * "yam" commodity. Real, current data exists for Nigeria (n=13, latest
+ * 2026-04-15) and Cameroon (n=7, latest 2026-03-15). Ivory Coast has a
+ * "Yam (florido)" reading too, but only 1 data point with an
+ * "aggregate"-only price flag - deliberately excluded as too thin, same
+ * standard used elsewhere in this file. Benin also has rich yam data in
+ * this dataset but isn't one of our configured countries.
  */
 
 const CSV_URL_TEMPLATE = (year) =>
@@ -52,13 +60,17 @@ const CURRENT_YEAR = 2026;
 // the dataset for that country (some countries label the same crop
 // differently, e.g. "Maize" vs "Maize (white)").
 const COUNTRY_CROP_MAP = {
-  NG: { maize: ['Maize flour'], rice: ['Rice (local)'], sorghum: ['Sorghum'] },
+  NG: { maize: ['Maize flour'], rice: ['Rice (local)'], sorghum: ['Sorghum'], yam: ['Yam'] },
   KE: { maize: ['Maize (white, dry)', 'Maize'] },
   ET: { maize: ['Maize (white)', 'Maize (yellow)'], coffee: ['Coffee'] },
   TZ: { maize: ['Maize'], sorghum: ['Sorghum'] },
   UG: { maize: ['Maize (white)'] },
   RW: { maize: ['Maize'] },
-  CM: { 'palm-oil': ['Oil (palm)'] },
+  // "yam" verified present 2026-07-08 (latest date 2026-03-15, n=7,
+  // priceflag "actual"). Note Cameroon also has a distinct "Cocoyam
+  // (macabo)" commodity in this dataset - that is a different crop and
+  // is NOT mapped here.
+  CM: { 'palm-oil': ['Oil (palm)'], yam: ['Yam'] },
   CI: { 'palm-oil': ['Oil (palm)'] },
   SN: { groundnuts: ['Groundnuts (shelled)'], rice: ['Rice (local)'] },
   MZ: { maize: ['Maize meal'] },
