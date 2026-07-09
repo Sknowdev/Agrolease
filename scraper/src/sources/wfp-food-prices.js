@@ -1,4 +1,5 @@
 import { writeCommodityPrice } from '../lib/priceWriter.js';
+import { toPricePerTonne, classifyUnitType } from '../lib/price-normalize.js';
 
 /**
  * WFP (World Food Programme) Global Food Prices dataset, republished on
@@ -61,11 +62,26 @@ const CURRENT_YEAR = 2026;
 // differently, e.g. "Maize" vs "Maize (white)").
 const COUNTRY_CROP_MAP = {
   NG: { maize: ['Maize flour'], rice: ['Rice (local)'], sorghum: ['Sorghum'], yam: ['Yam'] },
-  KE: { maize: ['Maize (white, dry)', 'Maize'] },
+  // "beans" (Beans, rosecoco) added 2026-07-09 - verified present, n=1
+  // (thin, but genuine "actual"-flagged data, not fabricated).
+  KE: { maize: ['Maize (white, dry)', 'Maize'], beans: ['Beans (rosecoco)'] },
   ET: { maize: ['Maize (white)', 'Maize (yellow)'], coffee: ['Coffee'] },
   TZ: { maize: ['Maize'], sorghum: ['Sorghum'] },
-  UG: { maize: ['Maize (white)'] },
-  RW: { maize: ['Maize'] },
+  // "beans", "cassava" (prefers fresh over flour when both exist),
+  // "millet" (flour), "sorghum" added 2026-07-09 - all verified present
+  // with real, current "actual"-flagged data (n=11-21).
+  UG: {
+    maize: ['Maize (white)'],
+    beans: ['Beans'],
+    cassava: ['Cassava (fresh)', 'Cassava flour'],
+    millet: ['Millet flour'],
+    sorghum: ['Sorghum'],
+  },
+  // "beans" added 2026-07-09 - verified present, n=10, "actual" flag.
+  // "rice" uses only "Rice (local)" (not "Rice (imported)") - imported
+  // rice isn't a domestically grown farm crop, so it's deliberately
+  // excluded per the same "farm crop only" standard applied elsewhere.
+  RW: { maize: ['Maize'], beans: ['Beans (dry)'], rice: ['Rice (local)'] },
   // "yam" verified present 2026-07-08 (latest date 2026-03-15, n=7,
   // priceflag "actual"). Note Cameroon also has a distinct "Cocoyam
   // (macabo)" commodity in this dataset - that is a different crop and
@@ -73,7 +89,10 @@ const COUNTRY_CROP_MAP = {
   CM: { 'palm-oil': ['Oil (palm)'], yam: ['Yam'] },
   CI: { 'palm-oil': ['Oil (palm)'] },
   SN: { groundnuts: ['Groundnuts (shelled)'], rice: ['Rice (local)'] },
-  MZ: { maize: ['Maize meal'] },
+  // "groundnuts" and "rice" added 2026-07-09 - verified present, n=8-9,
+  // "actual" flag. "cassava" still intentionally excluded - not present
+  // in Mozambique's WFP data.
+  MZ: { maize: ['Maize meal'], groundnuts: ['Groundnuts'], rice: ['Rice'] },
   EG: { wheat: ['Wheat flour (unpacked, 72%)'], rice: ['Rice'] },
   ML: { sorghum: ['Sorghum'], groundnuts: ['Groundnuts (shelled)'] },
   BF: { sorghum: ['Sorghum (white)'], groundnuts: ['Groundnuts (shelled)'] },
@@ -132,6 +151,30 @@ export function makeWfpScraper(countryCode) {
   };
 }
 
+/**
+ * Single-country, single-crop entry point. Needed for Nigeria's "yam"
+ * mapping (added 2026-07-08): Nigeria's maize/rice/sorghum/soybeans are
+ * already covered by the better, farmgate-level NBS dataset
+ * (nigeria-nbs.js), so there is no CLI entry that runs the *full* WFP
+ * scraper for Nigeria - which meant this file's `NG: { ... yam: [...] }`
+ * mapping was never actually invoked by anything (a real bug, caught by
+ * the user reporting Nigeria's yam page showing no data at all). This
+ * lets index.js wire up just the one crop WFP genuinely adds for a
+ * country that also has another primary source, without silently
+ * re-scraping (and potentially conflicting with) crops NBS already owns.
+ */
+export function makeWfpCropScraper(countryCode, cropSlug) {
+  return async function scrape() {
+    const rows = await downloadAndParseCsv(CURRENT_YEAR);
+    const cropMap = COUNTRY_CROP_MAP[countryCode];
+    const iso3 = ISO3_BY_CODE[countryCode];
+    if (!cropMap || !cropMap[cropSlug] || !iso3) {
+      return { rowsWritten: 0, rowsSkipped: 0, skippedReason: 'not_configured' };
+    }
+    return processCountry(countryCode, iso3, { [cropSlug]: cropMap[cropSlug] }, rows);
+  };
+}
+
 async function processCountry(countryCode, iso3, cropMap, rows) {
   const countryRows = rows.filter((r) => r.countryiso3 === iso3);
   if (countryRows.length === 0) {
@@ -159,16 +202,49 @@ async function processCountry(countryCode, iso3, cropMap, rows) {
       continue;
     }
 
-    const avgPrice = matching.reduce((sum, r) => sum + r.price, 0) / matching.length;
-    const priceLocal = Math.round(avgPrice * 100) / 100;
+    // BUG FIX (2026-07-09): this used to average the raw reported
+    // `price` and write that directly as priceLocal, then the UI
+    // displayed it labeled "/ tonne" - but WFP's `price` column is per
+    // the market's own pack/unit size (e.g. "2.5 KG" of yam, "KG" of
+    // maize), NOT already per metric tonne. That produced results like
+    // "NGN 3,500 / tonne" for yam that was actually NGN 3,500 for 2.5kg
+    // (i.e. ~NGN 1,400,000/tonne) - caught live by the user comparing
+    // against real-world prices. Every row is now converted to a real
+    // price-per-tonne via toPricePerTonne() (crop-agnostic, keyed off
+    // the `unit` column, not the commodity name) BEFORE averaging, and
+    // a row is skipped rather than guessed if that conversion fails
+    // (e.g. an unrecognized/non-weight unit).
+    const converted = matching
+      .map((r) => ({ ...r, pricePerTonne: toPricePerTonne(r.price, r.unit, { cropSlug }) }))
+      .filter((r) => r.pricePerTonne !== null);
+
+    if (converted.length === 0) {
+      rowsSkipped += 1;
+      continue;
+    }
+
+    const avgPricePerTonne =
+      converted.reduce((sum, r) => sum + r.pricePerTonne, 0) / converted.length;
+    const priceLocal = Math.round(avgPricePerTonne * 100) / 100;
+    const unitRaw = converted[0].unit;
+    const isDensityConverted =
+      cropSlug === 'palm-oil' && /\bl(itres?)?\b/i.test(unitRaw ?? '');
+    const unitType = isDensityConverted ? 'weight' : classifyUnitType(unitRaw);
+    const sourceNote = isDensityConverted
+      ? `normalized to price/tonne via a fixed 0.9 kg/L palm oil density`
+      : 'normalized to price/tonne';
 
     const result = await writeCommodityPrice({
       countryCode,
       cropName: cropSlug,
       priceLocal,
-      currencyCode: currencyCode ?? matching[0].currency,
+      currencyCode: currencyCode ?? converted[0].currency,
       dataDate: latestDate,
-      source: `WFP Global Food Prices (national avg of ${matching.length} market readings)`,
+      source: `WFP Global Food Prices (national avg of ${converted.length} market readings, ${sourceNote})`,
+      sourceKey: 'WFP Global Food Prices',
+      pricePerTonne: priceLocal,
+      unitRaw,
+      unitType,
     });
 
     if (result.inserted) rowsWritten += 1;

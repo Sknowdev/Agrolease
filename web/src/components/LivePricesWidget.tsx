@@ -64,8 +64,23 @@ export function LivePricesWidget() {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <p className="eyebrow">Today&apos;s Price</p>
+            {/*
+             * BUG FIX (2026-07-09): this heading said "Live Commodity
+             * Prices" unconditionally, even when the price shown right
+             * below it is explicitly tagged "Estimated" (or when there's
+             * no data at all) - a direct on-page contradiction the user
+             * caught (screenshot: "Live Commodity Prices" heading next to
+             * an "Estimated" badge). Same "never claim more freshness than
+             * the data actually has" rule already applied to individual
+             * price badges elsewhere - just wasn't applied to this section
+             * title. Now reflects the actual state of what's displayed.
+             */}
             <h2 id="live-prices-heading" className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight">
-              Live Commodity Prices
+              {status !== 'loading' && summary
+                ? summary.latest.sourceType === 'estimated'
+                  ? 'Estimated Commodity Prices'
+                  : 'Reported Commodity Prices'
+                : 'Commodity Prices'}
             </h2>
           </div>
           <Link

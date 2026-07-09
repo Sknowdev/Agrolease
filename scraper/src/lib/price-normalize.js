@@ -9,6 +9,30 @@
  */
 
 const WEIGHT_UNIT_RE = /^(\d+(?:\.\d+)?)?\s*(kg|g)$/i;
+const VOLUME_UNIT_RE = /^(\d+(?:\.\d+)?)?\s*(l|litre|liter)s?$/i;
+
+/**
+ * Density lookup for the small set of liquid commodities this project
+ * actually tracks (currently just palm oil, for Cameroon/Ivory Coast).
+ * This is NOT a price guess - density is a fixed physical property of
+ * the substance, not a market value that changes day to day, so citing
+ * one fixed, sourced constant here is a different category of decision
+ * than fabricating a price. Value taken from published food-science /
+ * conversion references (~0.90-0.91 kg per litre for palm oil at room
+ * temperature - see e.g. convertlitertokg.com, kilosinlitres.com, and
+ * academic density tables for edible oils, all converging on the same
+ * ~0.90 figure). Added 2026-07-09 after the user asked why Cameroon/
+ * Ivory Coast palm oil showed no price - WFP reports it in litres, and
+ * this project's standing rule is to never guess a conversion for a
+ * non-weight unit UNLESS a real, fixed, citable factor exists. For
+ * every other volume-based commodity not listed here, the old
+ * behavior (return null, skip the row) still applies - this map must
+ * only ever contain commodities with a genuinely well-established,
+ * sourced density, never an assumed one.
+ */
+const LITRE_TO_KG_DENSITY = {
+  'palm-oil': 0.9,
+};
 
 /**
  * Converts a price for a given unit string into a price-per-metric-tonne
@@ -24,21 +48,38 @@ const WEIGHT_UNIT_RE = /^(\d+(?:\.\d+)?)?\s*(kg|g)$/i;
  *   toPricePerTonne(10, 'L')        -> null      (not weight-based)
  *   toPricePerTonne(10, 'garbage')  -> null      (unrecognized unit)
  */
-export function toPricePerTonne(price, unit) {
+export function toPricePerTonne(price, unit, { cropSlug } = {}) {
   if (!Number.isFinite(price) || price <= 0) return null;
   if (typeof unit !== 'string') return null;
 
-  const match = unit.trim().match(WEIGHT_UNIT_RE);
-  if (!match) return null;
+  const weightMatch = unit.trim().match(WEIGHT_UNIT_RE);
+  if (weightMatch) {
+    const [, amountStr, unitWord] = weightMatch;
+    const amount = amountStr ? parseFloat(amountStr) : 1;
+    if (!Number.isFinite(amount) || amount <= 0) return null;
 
-  const [, amountStr, unitWord] = match;
-  const amount = amountStr ? parseFloat(amountStr) : 1;
-  if (!Number.isFinite(amount) || amount <= 0) return null;
+    const kg = unitWord.toLowerCase() === 'g' ? amount / 1000 : amount;
+    if (kg <= 0) return null;
 
-  const kg = unitWord.toLowerCase() === 'g' ? amount / 1000 : amount;
-  if (kg <= 0) return null;
+    return (price / kg) * 1000;
+  }
 
-  return (price / kg) * 1000;
+  // Volume -> weight, only for commodities with a real, fixed, sourced
+  // density (see LITRE_TO_KG_DENSITY above) - every other volume unit
+  // still correctly returns null rather than guessing.
+  const volumeMatch = unit.trim().match(VOLUME_UNIT_RE);
+  if (volumeMatch && cropSlug && LITRE_TO_KG_DENSITY[cropSlug]) {
+    const [, amountStr] = volumeMatch;
+    const litres = amountStr ? parseFloat(amountStr) : 1;
+    if (!Number.isFinite(litres) || litres <= 0) return null;
+
+    const kg = litres * LITRE_TO_KG_DENSITY[cropSlug];
+    if (kg <= 0) return null;
+
+    return (price / kg) * 1000;
+  }
+
+  return null;
 }
 
 /**

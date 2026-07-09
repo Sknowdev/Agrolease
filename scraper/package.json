@@ -11,11 +11,14 @@
     "scrape:brazil": "node src/index.js --source=brazil",
     "scrape:uk": "node src/index.js --source=uk",
     "scrape:all": "node src/index.js --source=all",
+    "admin-entry": "node src/admin-entry.js",
+    "inspect-prices": "node src/inspect-prices.js",
     "test": "node --test src/**/*.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "cheerio": "^1.0.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0"
   }
 }

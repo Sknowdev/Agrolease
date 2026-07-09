@@ -41,6 +41,15 @@ export const CROP_LABELS: Record<string, string> = {
   coffee: 'Coffee',
   'palm-oil': 'Palm Oil',
   ginger: 'Ginger',
+  // Added 2026-07-09 while expanding countries that only had 1-2 crops.
+  // All verified via real, current ("actual"-flagged) WFP Global Food
+  // Prices data - see scraper/src/sources/wfp-food-prices.js
+  // COUNTRY_CROP_MAP for exact figures/dates per country. Deliberately
+  // excludes non-farm-crop items available in the same dataset (e.g.
+  // salt, cooking oil sold as a packaged good, milk, fuel) per
+  // instruction - only real, grown/harvested crops are listed here.
+  beans: 'Beans',
+  millet: 'Millet',
   // Added 2026-07-08 after verifying real, current WFP Global Food Prices
   // data exists for this crop in Nigeria and Cameroon (see COUNTRY_CROP_MAP
   // in scraper/src/sources/wfp-food-prices.js for exact figures/dates).
@@ -148,7 +157,10 @@ export const COUNTRIES: CountryConfig[] = [
     live: true,
     priceFeedMethod: 'scraper',
     source: 'WFP Global Food Prices',
-    crops: ['maize'],
+    // "beans" (Beans, rosecoco) added 2026-07-09 - real, current data
+    // verified (2026-04-15, n=1 - thin, but a genuine "actual"-flagged
+    // reading, not stale/fabricated).
+    crops: ['maize', 'beans'],
   },
   {
     code: 'ET',
@@ -181,7 +193,13 @@ export const COUNTRIES: CountryConfig[] = [
     live: true,
     priceFeedMethod: 'scraper',
     source: 'WFP Global Food Prices',
-    crops: ['maize'],
+    // "beans", "cassava", "millet", "sorghum" added 2026-07-09 - all
+    // real, current data verified (2026-04-15, n=12-21 market readings
+    // each, "actual" flag). Not adding "cassava-flour" as a separate
+    // crop - it's the same underlying crop as cassava, just processed;
+    // the scraper maps both WFP commodities into the single "cassava"
+    // slug and prefers whichever has more/fresher readings.
+    crops: ['maize', 'beans', 'cassava', 'millet', 'sorghum'],
   },
   {
     code: 'RW',
@@ -192,7 +210,9 @@ export const COUNTRIES: CountryConfig[] = [
     live: true,
     priceFeedMethod: 'scraper',
     source: 'WFP Global Food Prices',
-    crops: ['maize'],
+    // "beans" and "rice" added 2026-07-09 - real, current data verified
+    // (2026-05-15, n=4-10 market readings, "actual" flag).
+    crops: ['maize', 'beans', 'rice'],
   },
   {
     code: 'CM',
@@ -218,6 +238,15 @@ export const COUNTRIES: CountryConfig[] = [
     live: true,
     priceFeedMethod: 'scraper',
     source: 'WFP Global Food Prices',
+    // KNOWN GAP (re-confirmed 2026-07-09): this page will show "not
+    // available" indefinitely under current data, and that's correct,
+    // not a bug. WFP's only palm-oil reading for Ivory Coast carries an
+    // "aggregate"-only price flag (not "actual"), which this project's
+    // scraper deliberately excludes as too thin/unreliable - same
+    // standard applied to every other thin/stale source rejected
+    // elsewhere (see web_progress.md). Ivory Coast also isn't covered
+    // by the World Bank RTFP dataset at all. Re-check periodically -
+    // WFP may resume active, "actual"-flagged Ivory Coast collection.
     crops: ['palm-oil'],
   },
   {
@@ -242,7 +271,9 @@ export const COUNTRIES: CountryConfig[] = [
     source: 'WFP Global Food Prices',
     // "cassava" dropped - not present in Mozambique's WFP data; "maize"
     // is tracked as "Maize meal" there, which the scraper module maps.
-    crops: ['maize'],
+    // "groundnuts" and "rice" added 2026-07-09 - real, current data
+    // verified (2026-03-15, n=8-9 market readings, "actual" flag).
+    crops: ['maize', 'groundnuts', 'rice'],
   },
   {
     code: 'EG',

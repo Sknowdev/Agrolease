@@ -64,14 +64,28 @@ export async function scrapeNigeria() {
     const stats = pickBestCategoryStats(sums, crop);
     if (!stats) continue;
 
-    const priceLocal = Math.round((stats.total / stats.count) * 100) / 100;
+    // BUG FIX (2026-07-09): the dataset's UPRICE column is a price PER
+    // KILOGRAM, confirmed directly in the World Bank/NBS methodology
+    // notes for this dataset ("no commodity was priced less than 100
+    // naira per Kg or higher than 6000 naira per kg" - a global outlier
+    // threshold stated in NGN/kg terms). The old code wrote the raw
+    // per-kg average directly as priceLocal and the site displayed it
+    // labeled "/ tonne" - e.g. maize showing ~NGN 1,330/tonne when a
+    // real per-tonne price is ~1,000x that. Fixed by multiplying the
+    // per-kg average by 1000 to get a genuine price per metric tonne.
+    const avgPricePerKg = stats.total / stats.count;
+    const priceLocal = Math.round(avgPricePerKg * 1000 * 100) / 100;
     const result = await writeCommodityPrice({
       countryCode: 'NG',
       cropName: crop,
       priceLocal,
       currencyCode: 'NGN',
       dataDate,
-      source: `NBS Food Price Tracking (${stats.category}, national avg of ${stats.count} readings)`,
+      source: `NBS Food Price Tracking (${stats.category}, national avg of ${stats.count} readings, converted from NGN/kg to NGN/tonne)`,
+      sourceKey: 'NBS Food Price Tracking',
+      pricePerTonne: priceLocal,
+      unitRaw: 'KG',
+      unitType: 'weight',
     });
 
     if (result.inserted) rowsWritten += 1;
