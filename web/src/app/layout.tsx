@@ -34,6 +34,17 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <SiteHeader />
+        {/*
+         * No top padding here on purpose: the header is now `fixed`
+         * (floating capsule, see SiteHeader) rather than `sticky`, and
+         * the homepage hero is meant to bleed all the way to the top of
+         * the viewport with the pill floating over it - that's the whole
+         * point of the "floating nav over full-bleed image" look. Every
+         * OTHER page (no full-bleed top section) adds its own top
+         * padding/margin to clear the floating pill instead - see
+         * about/page.tsx, platform/page.tsx, prices/[country]/[crop]/page.tsx,
+         * etc. for the `pt-28` convention used there.
+         */}
         <main className="flex-1">{children}</main>
         <SiteFooter />
       </body>
