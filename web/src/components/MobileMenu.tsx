@@ -6,14 +6,14 @@ import Link from 'next/link';
 import { SocialLinks } from './SocialLinks';
 
 const LINKS = [
-  { href: '/#live-prices', label: 'Live Prices' },
-  { href: '/prices', label: 'All Countries' },
-  { href: '/#how-it-works', label: 'How It Works' },
-  { href: '/#faq-heading', label: 'FAQ' },
+  { href: '/prices', label: 'Live Prices' },
+  { href: '/platform', label: 'The Platform' },
+  { href: '/#how-it-works', label: 'The Process' },
+  { href: '/#faq-heading', label: 'Questions' },
   { href: '/about', label: 'About' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
-  { href: '/early-access', label: 'Get Started' },
+  { href: '/early-access', label: 'Join Waitlist' },
 ];
 
 /**

@@ -59,8 +59,8 @@ export function LivePricesWidget() {
   }
 
   return (
-    <section id="live-prices" aria-labelledby="live-prices-heading" className="w-full py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 glow-border rounded-2xl bg-surface p-6 sm:p-10">
+    <section id="live-prices" aria-labelledby="live-prices-heading" className="w-full py-20 sm:py-28 bg-surface border-t border-border">
+      <div className="mx-auto max-w-6xl px-4 sm:px-8 glow-border rounded-2xl bg-background p-6 sm:p-10">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <p className="eyebrow">Today&apos;s Price</p>
