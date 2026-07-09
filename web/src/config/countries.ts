@@ -218,6 +218,15 @@ export const COUNTRIES: CountryConfig[] = [
     live: true,
     priceFeedMethod: 'scraper',
     source: 'WFP Global Food Prices',
+    // KNOWN GAP (re-confirmed 2026-07-09): this page will show "not
+    // available" indefinitely under current data, and that's correct,
+    // not a bug. WFP's only palm-oil reading for Ivory Coast carries an
+    // "aggregate"-only price flag (not "actual"), which this project's
+    // scraper deliberately excludes as too thin/unreliable - same
+    // standard applied to every other thin/stale source rejected
+    // elsewhere (see web_progress.md). Ivory Coast also isn't covered
+    // by the World Bank RTFP dataset at all. Re-check periodically -
+    // WFP may resume active, "actual"-flagged Ivory Coast collection.
     crops: ['palm-oil'],
   },
   {

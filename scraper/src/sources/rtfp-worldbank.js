@@ -153,13 +153,17 @@ async function processCountry(countryCode, iso3, cropMap, rows, header) {
     // skipping the row entirely (never guessing) when the unit can't be
     // parsed as a weight - e.g. Cameroon's "oil" column is in "L"
     // (litres), a volume unit with no safe density conversion.
-    const pricePerTonne = unit ? toPricePerTonne(rawPriceLocal, unit) : null;
+    const pricePerTonne = unit ? toPricePerTonne(rawPriceLocal, unit, { cropSlug }) : null;
     if (pricePerTonne === null) {
       rowsSkipped += 1;
       continue;
     }
     const priceLocal = Math.round(pricePerTonne * 100) / 100;
-    const unitType = classifyUnitType(unit);
+    const isDensityConverted = cropSlug === 'palm-oil' && /\bl(itres?)?\b/i.test(unit ?? '');
+    const unitType = isDensityConverted ? 'weight' : classifyUnitType(unit);
+    const sourceNote = isDensityConverted
+      ? 'normalized to price/tonne via a fixed 0.9 kg/L palm oil density'
+      : 'normalized to price/tonne';
 
     const result = await writeCommodityPrice({
       countryCode,
@@ -167,7 +171,7 @@ async function processCountry(countryCode, iso3, cropMap, rows, header) {
       priceLocal,
       currencyCode,
       dataDate: latestDate,
-      source: `World Bank Real Time Food Prices (estimated, national avg of ${latestRows.length} markets, normalized to price/tonne)`,
+      source: `World Bank Real Time Food Prices (estimated, national avg of ${latestRows.length} markets, ${sourceNote})`,
       // Extra fields beyond the original writeCommodityPrice signature -
       // priceWriter.js's insert needs to accept these; see the
       // accompanying Supabase migration adding these three columns.

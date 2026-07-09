@@ -197,7 +197,7 @@ async function processCountry(countryCode, iso3, cropMap, rows) {
     // a row is skipped rather than guessed if that conversion fails
     // (e.g. an unrecognized/non-weight unit).
     const converted = matching
-      .map((r) => ({ ...r, pricePerTonne: toPricePerTonne(r.price, r.unit) }))
+      .map((r) => ({ ...r, pricePerTonne: toPricePerTonne(r.price, r.unit, { cropSlug }) }))
       .filter((r) => r.pricePerTonne !== null);
 
     if (converted.length === 0) {
@@ -209,7 +209,12 @@ async function processCountry(countryCode, iso3, cropMap, rows) {
       converted.reduce((sum, r) => sum + r.pricePerTonne, 0) / converted.length;
     const priceLocal = Math.round(avgPricePerTonne * 100) / 100;
     const unitRaw = converted[0].unit;
-    const unitType = classifyUnitType(unitRaw);
+    const isDensityConverted =
+      cropSlug === 'palm-oil' && /\bl(itres?)?\b/i.test(unitRaw ?? '');
+    const unitType = isDensityConverted ? 'weight' : classifyUnitType(unitRaw);
+    const sourceNote = isDensityConverted
+      ? `normalized to price/tonne via a fixed 0.9 kg/L palm oil density`
+      : 'normalized to price/tonne';
 
     const result = await writeCommodityPrice({
       countryCode,
@@ -217,7 +222,7 @@ async function processCountry(countryCode, iso3, cropMap, rows) {
       priceLocal,
       currencyCode: currencyCode ?? converted[0].currency,
       dataDate: latestDate,
-      source: `WFP Global Food Prices (national avg of ${converted.length} market readings, normalized to price/tonne)`,
+      source: `WFP Global Food Prices (national avg of ${converted.length} market readings, ${sourceNote})`,
       pricePerTonne: priceLocal,
       unitRaw,
       unitType,

@@ -28,6 +28,22 @@ test('toPricePerTonne: non-weight unit (Liters) returns null, no guess', () => {
   assert.equal(toPricePerTonne(10, 'L'), null);
 });
 
+test('toPricePerTonne: volume unit still returns null when cropSlug has no known density', () => {
+  assert.equal(toPricePerTonne(10, 'L', { cropSlug: 'maize' }), null);
+});
+
+test('toPricePerTonne: palm-oil in litres converts via its known density (0.9 kg/L)', () => {
+  // 100 per 1L palm oil -> 100 / 0.9 = ~111.11/kg -> ~111,111.11/tonne
+  const result = toPricePerTonne(100, 'L', { cropSlug: 'palm-oil' });
+  assert.ok(result !== null);
+  assert.ok(Math.abs(result - 111111.11) < 1);
+});
+
+test('toPricePerTonne: palm-oil with a prefixed amount, e.g. "5 L"', () => {
+  // 450 per 5L -> 90/L -> 90/0.9 = 100/kg -> 100,000/tonne
+  assert.equal(toPricePerTonne(450, '5 L', { cropSlug: 'palm-oil' }), 100000);
+});
+
 test('toPricePerTonne: non-weight unit (Loaf) returns null', () => {
   assert.equal(toPricePerTonne(5, 'Loaf'), null);
 });
