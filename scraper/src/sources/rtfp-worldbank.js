@@ -138,12 +138,28 @@ async function processCountry(countryCode, iso3, cropMap, rows, header) {
     const latestDate = valued.reduce((max, r) => (r.DATES > max ? r.DATES : max), '');
     const latestRows = valued.filter((r) => r.DATES === latestDate);
 
-    const avgPrice = latestRows.reduce((sum, r) => sum + Number(r[estimatedCol]), 0) / latestRows.length;
-    const priceLocal = Math.round(avgPrice * 100) / 100;
+    const avgRawPrice = latestRows.reduce((sum, r) => sum + Number(r[estimatedCol]), 0) / latestRows.length;
+    const rawPriceLocal = Math.round(avgRawPrice * 100) / 100;
     const currencyCode = latestRows[0].currency;
     const unit = extractUnitForCommodity(latestRows[0].components, commodityCol);
-    const pricePerTonne = unit ? toPricePerTonne(priceLocal, unit) : null;
-    const unitType = unit ? classifyUnitType(unit) : 'weight';
+
+    // BUG FIX (2026-07-09): pricePerTonne was already being computed
+    // correctly here via toPricePerTonne(), but priceLocal - the field
+    // the website actually reads and displays labeled "/ tonne" - was
+    // still being set to the RAW per-unit price (e.g. the price for a
+    // "2.1 KG" pack), not the converted tonne figure. The correct number
+    // existed in the database the whole time, just in a column nothing
+    // rendered. Fixed by making priceLocal BE the converted value, and
+    // skipping the row entirely (never guessing) when the unit can't be
+    // parsed as a weight - e.g. Cameroon's "oil" column is in "L"
+    // (litres), a volume unit with no safe density conversion.
+    const pricePerTonne = unit ? toPricePerTonne(rawPriceLocal, unit) : null;
+    if (pricePerTonne === null) {
+      rowsSkipped += 1;
+      continue;
+    }
+    const priceLocal = Math.round(pricePerTonne * 100) / 100;
+    const unitType = classifyUnitType(unit);
 
     const result = await writeCommodityPrice({
       countryCode,
@@ -151,7 +167,7 @@ async function processCountry(countryCode, iso3, cropMap, rows, header) {
       priceLocal,
       currencyCode,
       dataDate: latestDate,
-      source: `World Bank Real Time Food Prices (estimated, national avg of ${latestRows.length} markets)`,
+      source: `World Bank Real Time Food Prices (estimated, national avg of ${latestRows.length} markets, normalized to price/tonne)`,
       // Extra fields beyond the original writeCommodityPrice signature -
       // priceWriter.js's insert needs to accept these; see the
       // accompanying Supabase migration adding these three columns.

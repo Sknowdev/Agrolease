@@ -5,7 +5,7 @@ import { scrapeGhana } from './sources/ghana.js';
 import { scrapeSouthAfrica } from './sources/south-africa.js';
 import { scrapeBrazil } from './sources/brazil.js';
 import { scrapeUk } from './sources/uk-defra.js';
-import { makeWfpScraper } from './sources/wfp-food-prices.js';
+import { makeWfpScraper, makeWfpCropScraper } from './sources/wfp-food-prices.js';
 import { makeRtfpScraper } from './sources/rtfp-worldbank.js';
 import { fetchRainfallForAllCountries, COUNTRY_COORDINATES } from './sources/rainfall-openmeteo.js';
 
@@ -25,6 +25,15 @@ import { fetchRainfallForAllCountries, COUNTRY_COORDINATES } from './sources/rai
 
 const SOURCES = {
   nigeria: { label: 'Nigeria (NBS Food Price Tracking)', run: scrapeNigeria },
+  // BUG FIX (2026-07-09): Nigeria's "yam" crop was mapped in
+  // wfp-food-prices.js's COUNTRY_CROP_MAP back on 2026-07-08, but no
+  // CLI source ever actually ran the WFP scraper for Nigeria (the
+  // 'nigeria' key above only runs the NBS dataset, which doesn't cover
+  // yam) - so this mapping was dead code and the /prices/nigeria/yam
+  // page always showed "not available." This entry runs WFP for just
+  // the yam crop, leaving NBS as Nigeria's primary source for
+  // maize/rice/sorghum/soybeans untouched.
+  'nigeria-yam': { label: 'Nigeria - Yam (WFP Global Food Prices)', run: makeWfpCropScraper('NG', 'yam') },
   ghana: { label: 'Ghana (admin-entered, no public feed)', run: scrapeGhana },
   'south-africa': { label: 'South Africa (admin-entered, no public feed)', run: scrapeSouthAfrica },
   brazil: { label: 'Brazil (admin-entered, no public feed)', run: scrapeBrazil },

@@ -22,6 +22,9 @@ import { getSupabaseClient } from './supabaseClient.js';
  *        unit isn't weight-based (never a guessed conversion).
  * @param {string|null} [price.unitRaw] the unit exactly as reported, e.g. "2.5 KG"
  * @param {'weight'|'volume'|'count'|null} [price.unitType] from classifyUnitType()
+ * @param {'scraper'|'admin'} [price.enteredBy] who/what entered this row - defaults
+ *        to 'scraper' (every existing scraper module keeps working unchanged);
+ *        pass 'admin' from a manual/admin-entry tool.
  * @returns {Promise<{ inserted: boolean, reason?: string }>}
  */
 export async function writeCommodityPrice(price) {
@@ -42,6 +45,13 @@ export async function writeCommodityPrice(price) {
     pricePerTonne = null,
     unitRaw = null,
     unitType = null,
+    // BUG FIX (2026-07-09): this was hardcoded to 'scraper' in the
+    // insert below regardless of caller, which would have mislabeled
+    // any admin-entered price (Ghana/South Africa/Brazil) as
+    // scraper-sourced the moment an admin-entry tool started using this
+    // same writer function. Defaults to 'scraper' (unchanged behavior
+    // for every existing scraper module) but can be overridden.
+    enteredBy = 'scraper',
   } = price;
 
   const { data: latest, error: fetchError } = await supabase
@@ -79,7 +89,7 @@ export async function writeCommodityPrice(price) {
     exchange_rate: exchangeRate,
     source,
     data_date: dataDate,
-    entered_by: 'scraper',
+    entered_by: enteredBy,
     source_type: sourceType,
     price_per_tonne: pricePerTonne,
     unit_raw: unitRaw,
