@@ -1,4 +1,5 @@
 import { COUNTRIES } from '@/config/countries';
+import { ScrollReveal } from './ScrollReveal';
 
 /**
  * Ordered by what a visitor arriving from Google search or a grant
@@ -88,26 +89,30 @@ export function FaqSection() {
 
   return (
     <section aria-labelledby="faq-heading" className="w-full py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="text-center">
-          <p className="eyebrow">Questions</p>
-          <h2 id="faq-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
-            Frequently Asked Questions
-          </h2>
-        </div>
-        <div className="mt-10 max-w-2xl mx-auto divide-y divide-border glow-border rounded-2xl bg-surface">
-          {faqs.map((faq) => (
-            <details key={faq.question} className="group p-5 sm:p-6">
-              <summary className="flex items-center justify-between gap-3 cursor-pointer font-medium list-none">
-                {faq.question}
-                <span className="text-foreground/40 transition-transform group-open:rotate-45" aria-hidden="true">
-                  +
-                </span>
-              </summary>
-              <p className="mt-2.5 text-sm text-foreground/70">{faq.answer}</p>
-            </details>
-          ))}
-        </div>
+      <div className="mx-auto max-w-6xl px-4 sm:px-8">
+        <ScrollReveal>
+          <div className="text-center">
+            <p className="eyebrow">Questions</p>
+            <h2 id="faq-heading" className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+              Frequently Asked Questions
+            </h2>
+          </div>
+        </ScrollReveal>
+        <ScrollReveal delayMs={100}>
+          <div className="mt-10 max-w-2xl mx-auto divide-y divide-border glow-border rounded-2xl bg-surface">
+            {faqs.map((faq) => (
+              <details key={faq.question} className="group p-5 sm:p-6">
+                <summary className="flex items-center justify-between gap-3 cursor-pointer font-medium list-none">
+                  {faq.question}
+                  <span className="text-foreground/40 transition-transform group-open:rotate-45" aria-hidden="true">
+                    +
+                  </span>
+                </summary>
+                <p className="mt-2.5 text-sm text-foreground/70">{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

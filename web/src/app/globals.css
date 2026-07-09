@@ -1,21 +1,23 @@
 @import "tailwindcss";
 
 /*
- * AgroLease design system - a single fixed dark theme (black / white /
- * green, with a gold accent for primary CTAs). Previously supported a
- * light/dark toggle; that control was removed per feedback in favor of
- * one consistent brand look everywhere, so there is no .dark class or
- * light-mode variant to maintain anymore.
+ * AgroLease design system v2 (2026-07 redesign) - cream + green, inspired
+ * by CeresGrid's "feel" (spacing, big typography, floating hero text,
+ * scroll animation) without copying their layout or design. Replaces the
+ * previous black/white/green dark theme. Still a single fixed theme (no
+ * light/dark toggle) - every component below already reads its colors
+ * from these CSS variables via the @theme inline block, so this palette
+ * swap alone re-themes the entire site without touching component logic.
  */
 :root {
-  --background: #0a0a0a;
-  --foreground: #f4f7f4;
-  --surface: #121712;
-  --border: #223022;
+  --background: #f6f1e4; /* warm cream */
+  --foreground: #1b2a1e; /* deep green-black, not pure black */
+  --surface: #fffdf7; /* near-white card surface, sits a notch lighter than background */
+  --border: #e2d8bf; /* soft tan border */
 
-  --brand-green: #3fae49;
-  --brand-green-light: #5cc766;
-  --brand-accent: #e0b83c; /* gold, used for primary "Get Started" CTAs */
+  --brand-green: #1f5d34; /* deep forest green - solid buttons, headings */
+  --brand-green-light: #2f7a42; /* mid green - accent text, hover states. Chosen for AA contrast on cream/white, not just visual lightness */
+  --brand-accent: #b9852b; /* warm gold/terracotta, used for primary "Get Started" CTAs */
 }
 
 @theme inline {
