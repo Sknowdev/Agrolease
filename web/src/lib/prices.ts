@@ -78,7 +78,7 @@ function mapRow(row: {
 export async function getPriceSummary(
   countryCode: string,
   cropName: string,
-  { days = 30 }: { days?: number } = {}
+  { rowLimit = 60 }: { rowLimit?: number } = {}
 ): Promise<PriceSummary | null> {
   let supabase;
   try {
@@ -91,10 +91,23 @@ export async function getPriceSummary(
     return null;
   }
 
-  const since = new Date();
-  since.setDate(since.getDate() - days);
-  const sinceIso = since.toISOString().slice(0, 10);
-
+  // BUG FIX (2026-07-09): this used to filter with
+  // `.gte('data_date', today - 30 days)`, i.e. "only rows from the last
+  // 30 calendar days, measured from right now". That's fine for a daily
+  // source (UK/DEFRA), but WFP has a ~1-month collection/QA lag by its
+  // own documented behavior (see wfp-food-prices.js), and several other
+  // sources (Nigeria NBS, admin-entered Ghana/South Africa/Brazil) are
+  // monthly at best. Any time the latest real row was more than 30 days
+  // old relative to wall-clock "now", this query returned zero rows -
+  // even though real, current-for-that-source data existed - and the
+  // page silently fell through to the "coming soon" message. Confirmed
+  // live: Nigeria's NBS data is dated 2025-06-26, over a year old, so
+  // this bug was hiding Nigeria's real price data on production.
+  // Fixed by dropping the absolute date filter and instead taking the
+  // most recent `rowLimit` rows regardless of how old the latest one
+  // is. The page itself is responsible for deciding how to present a
+  // stale "latest" date (see PriceCard's "Updated: <date>" trust
+  // block) - this function's job is just to not hide real data.
   const { data, error } = await supabase
     .from('commodity_prices')
     .select(
@@ -102,8 +115,8 @@ export async function getPriceSummary(
     )
     .eq('country_code', countryCode.toUpperCase())
     .eq('crop_name', cropName)
-    .gte('data_date', sinceIso)
-    .order('data_date', { ascending: false });
+    .order('data_date', { ascending: false })
+    .limit(rowLimit);
 
   if (error) {
     console.error(`[prices] failed to fetch ${countryCode}/${cropName}:`, error.message);
