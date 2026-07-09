@@ -117,3 +117,37 @@ body {
     animation: none;
   }
 }
+
+/* Continuous horizontal scroll for <LivePriceTicker>. Pauses on hover
+   (see the Tailwind hover:[animation-play-state:paused] utility on the
+   element itself) so a visitor can actually read/click an item. */
+@keyframes tickerScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*='animate-\[tickerScroll'] {
+    animation: none !important;
+  }
+}
+
+/* Cross-fade + slight rise used by the cycling hero headline card
+   (HomeHero) each time the slide index changes. HomeHero itself already
+   freezes on the first slide (no interval, no index changes) when
+   prefers-reduced-motion is set, so this only ever plays once for those
+   users - no extra media query needed here. */
+@keyframes heroFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

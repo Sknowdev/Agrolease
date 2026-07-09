@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function EarlyAccessPage() {
   return (
-    <div className="mx-auto max-w-lg px-4 sm:px-6 py-10">
+    <div className="mx-auto max-w-lg px-4 sm:px-6 pt-28 pb-10">
       <h1 className="text-3xl font-semibold tracking-tight text-center">Get Early Access</h1>
       <p className="mt-3 text-foreground/70 text-center">
         Tell us a bit about yourself and we&apos;ll notify you as AgroLease becomes available in

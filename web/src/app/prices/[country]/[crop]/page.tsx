@@ -84,7 +84,7 @@ export default async function PricePage({ params }: PageProps) {
     : null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-10">
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 pt-28 pb-10">
       {jsonLd && (
         <script
           type="application/ld+json"

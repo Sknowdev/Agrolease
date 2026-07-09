@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 export default function PlatformPage() {
   return (
     <div>
-      <section className="w-full py-20 sm:py-28 border-b border-border">
+      <section className="w-full pt-28 pb-20 sm:pt-32 sm:pb-28 border-b border-border">
         <div className="mx-auto max-w-4xl px-4 sm:px-8 text-center">
           <ScrollReveal>
             <p className="eyebrow">The Platform</p>

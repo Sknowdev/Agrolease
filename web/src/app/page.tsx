@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { HomeHero } from '@/components/HomeHero';
+import { LivePriceTicker } from '@/components/LivePriceTicker';
 import { SolutionSection } from '@/components/SolutionSection';
 import { ProblemSection } from '@/components/ProblemSection';
 import { FeatureShowcase } from '@/components/FeatureShowcase';
@@ -12,16 +13,21 @@ import { ScrollReveal } from '@/components/ScrollReveal';
 /**
  * Homepage (2026-07 cream/green redesign). Restructured per explicit
  * direction: the site is "about AgroLease" (the platform/partnership OS),
- * not "about pricing" - <LivePricesWidget> is now positioned as a
+ * not "about pricing" - the interactive <LivePricesWidget> is a
  * click-through utility mid-page (like a persistent "Contact Us"), not
  * the hero's own content. Order:
  *
- *   Hero (full-bleed image, floating headline, 2 CTAs)
+ *   Hero (full-bleed image, cycling floating headline, 2 CTAs)
+ *   -> Live price ticker (real crop prices, server-rendered, no loading
+ *      state, no "N countries" framing - correction 2026-07-09: the
+ *      first thing after the hero must be actual prices, not metadata)
  *   -> Solution (1 illustration - what AgroLease is)
  *   -> Problem (4 animated cards - why it matters)
  *   -> Feature showcase (3 images - what's in the platform)
- *   -> Live prices widget (click-through utility, not the focus)
- *   -> How It Works / Roadmap stats / FAQ
+ *   -> Live prices widget (interactive country/crop lookup)
+ *   -> How It Works / Roadmap stats (credibility numbers live HERE, not
+ *      next to the ticker, so real prices are never sitting next to
+ *      "19 countries planned") / FAQ
  *   -> Closing CTA
  *
  * LossExample, ConduitSection, GateToSettlement, SecuritySection,
@@ -33,6 +39,7 @@ export default function HomePage() {
   return (
     <div>
       <HomeHero />
+      <LivePriceTicker />
       <SolutionSection />
       <ProblemSection />
       <FeatureShowcase />
