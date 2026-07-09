@@ -74,6 +74,7 @@ export async function scrapeUk() {
     currencyCode: 'GBP',
     dataDate,
     source: 'AHDB UK Corn Returns (weekly ex-farm spot price, Feed & Other wheat, UK aggregate)',
+    sourceKey: 'AHDB UK Corn Returns',
   });
 
   return { rowsWritten: result.inserted ? 1 : 0, rowsSkipped: result.inserted ? 0 : 1 };

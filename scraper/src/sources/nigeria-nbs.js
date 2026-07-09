@@ -82,6 +82,7 @@ export async function scrapeNigeria() {
       currencyCode: 'NGN',
       dataDate,
       source: `NBS Food Price Tracking (${stats.category}, national avg of ${stats.count} readings, converted from NGN/kg to NGN/tonne)`,
+      sourceKey: 'NBS Food Price Tracking',
       pricePerTonne: priceLocal,
       unitRaw: 'KG',
       unitType: 'weight',

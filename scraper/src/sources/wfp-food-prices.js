@@ -62,11 +62,26 @@ const CURRENT_YEAR = 2026;
 // differently, e.g. "Maize" vs "Maize (white)").
 const COUNTRY_CROP_MAP = {
   NG: { maize: ['Maize flour'], rice: ['Rice (local)'], sorghum: ['Sorghum'], yam: ['Yam'] },
-  KE: { maize: ['Maize (white, dry)', 'Maize'] },
+  // "beans" (Beans, rosecoco) added 2026-07-09 - verified present, n=1
+  // (thin, but genuine "actual"-flagged data, not fabricated).
+  KE: { maize: ['Maize (white, dry)', 'Maize'], beans: ['Beans (rosecoco)'] },
   ET: { maize: ['Maize (white)', 'Maize (yellow)'], coffee: ['Coffee'] },
   TZ: { maize: ['Maize'], sorghum: ['Sorghum'] },
-  UG: { maize: ['Maize (white)'] },
-  RW: { maize: ['Maize'] },
+  // "beans", "cassava" (prefers fresh over flour when both exist),
+  // "millet" (flour), "sorghum" added 2026-07-09 - all verified present
+  // with real, current "actual"-flagged data (n=11-21).
+  UG: {
+    maize: ['Maize (white)'],
+    beans: ['Beans'],
+    cassava: ['Cassava (fresh)', 'Cassava flour'],
+    millet: ['Millet flour'],
+    sorghum: ['Sorghum'],
+  },
+  // "beans" added 2026-07-09 - verified present, n=10, "actual" flag.
+  // "rice" uses only "Rice (local)" (not "Rice (imported)") - imported
+  // rice isn't a domestically grown farm crop, so it's deliberately
+  // excluded per the same "farm crop only" standard applied elsewhere.
+  RW: { maize: ['Maize'], beans: ['Beans (dry)'], rice: ['Rice (local)'] },
   // "yam" verified present 2026-07-08 (latest date 2026-03-15, n=7,
   // priceflag "actual"). Note Cameroon also has a distinct "Cocoyam
   // (macabo)" commodity in this dataset - that is a different crop and
@@ -74,7 +89,10 @@ const COUNTRY_CROP_MAP = {
   CM: { 'palm-oil': ['Oil (palm)'], yam: ['Yam'] },
   CI: { 'palm-oil': ['Oil (palm)'] },
   SN: { groundnuts: ['Groundnuts (shelled)'], rice: ['Rice (local)'] },
-  MZ: { maize: ['Maize meal'] },
+  // "groundnuts" and "rice" added 2026-07-09 - verified present, n=8-9,
+  // "actual" flag. "cassava" still intentionally excluded - not present
+  // in Mozambique's WFP data.
+  MZ: { maize: ['Maize meal'], groundnuts: ['Groundnuts'], rice: ['Rice'] },
   EG: { wheat: ['Wheat flour (unpacked, 72%)'], rice: ['Rice'] },
   ML: { sorghum: ['Sorghum'], groundnuts: ['Groundnuts (shelled)'] },
   BF: { sorghum: ['Sorghum (white)'], groundnuts: ['Groundnuts (shelled)'] },
@@ -223,6 +241,7 @@ async function processCountry(countryCode, iso3, cropMap, rows) {
       currencyCode: currencyCode ?? converted[0].currency,
       dataDate: latestDate,
       source: `WFP Global Food Prices (national avg of ${converted.length} market readings, ${sourceNote})`,
+      sourceKey: 'WFP Global Food Prices',
       pricePerTonne: priceLocal,
       unitRaw,
       unitType,

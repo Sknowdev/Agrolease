@@ -25,6 +25,9 @@ import { getSupabaseClient } from './supabaseClient.js';
  * @param {'scraper'|'admin'} [price.enteredBy] who/what entered this row - defaults
  *        to 'scraper' (every existing scraper module keeps working unchanged);
  *        pass 'admin' from a manual/admin-entry tool.
+ * @param {string} [price.sourceKey] short, stable prefix of `source` used only
+ *        for the skip-if-unchanged lookup - see the inline comment above its
+ *        destructuring for why this matters.
  * @returns {Promise<{ inserted: boolean, reason?: string }>}
  */
 export async function writeCommodityPrice(price) {
@@ -52,13 +55,55 @@ export async function writeCommodityPrice(price) {
     // same writer function. Defaults to 'scraper' (unchanged behavior
     // for every existing scraper module) but can be overridden.
     enteredBy = 'scraper',
+    // A short, STABLE prefix identifying which source this row came
+    // from, e.g. 'WFP Global Food Prices', 'World Bank Real Time Food
+    // Prices', 'NBS Food Price Tracking', 'AHDB UK Corn Returns'. Used
+    // ONLY for the skip-if-unchanged lookup below (an `ilike` prefix
+    // match against the full `source` string), never written to the
+    // database itself. Defaults to the full `source` string for
+    // backward compatibility with any caller that doesn't pass this,
+    // but every scraper module SHOULD pass a short stable prefix
+    // explicitly - the full `source` string usually contains a dynamic
+    // reading count (e.g. "avg of 21 market readings") that changes
+    // slightly between runs even when the underlying price hasn't, so
+    // matching on the full string would defeat skip-if-unchanged rather
+    // than fix the duplicate-row bug it exists to prevent.
+    sourceKey = source,
   } = price;
 
-  const { data: latest, error: fetchError } = await supabase
+  // BUG FIX (2026-07-09): this used to only filter by country+crop, not
+  // by source. A country+crop can legitimately have more than one active
+  // source (e.g. Kenya maize has both a WFP "reported" row and a World
+  // Bank RTFP "estimated" row, each on its own date/schedule). The old
+  // query picked whichever row happened to have the latest data_date
+  // across BOTH sources, compared THIS source's new value against it,
+  // and - since the two sources' prices/dates never matched exactly -
+  // almost always concluded "changed" and inserted a new row even when
+  // re-running the same source with identical data, producing exact
+  // duplicate rows (caught live: 3 duplicate UG/KE/MZ rows found in
+  // production after re-running scrapers during testing). Scoped the
+  // lookup to the same `source` string as well, so skip-if-unchanged
+  // actually compares each source against its own history.
+  let lookupQuery = supabase
     .from('commodity_prices')
-    .select('id, price_local, data_date')
+    .select('id, price_local, data_date, source')
     .eq('country_code', countryCode)
     .eq('crop_name', cropName)
+    .eq('entered_by', enteredBy);
+
+  // Admin entries have a fully free-text `source` (whatever citation the
+  // human typed in) rather than a stable machine-generated prefix, so
+  // there's nothing meaningful to prefix-match on - scoping by
+  // country+crop+entered_by='admin' alone is already correct there,
+  // since only one admin can realistically maintain one active price
+  // per country+crop at a time. Every scraper caller still narrows
+  // further by its own stable sourceKey prefix, so two different
+  // scraper sources for the same crop (e.g. WFP + RTFP) never collide.
+  if (enteredBy !== 'admin') {
+    lookupQuery = lookupQuery.ilike('source', `${sourceKey}%`);
+  }
+
+  const { data: latest, error: fetchError } = await lookupQuery
     .order('data_date', { ascending: false })
     .limit(1)
     .maybeSingle();

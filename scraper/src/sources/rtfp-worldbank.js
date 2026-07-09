@@ -172,6 +172,7 @@ async function processCountry(countryCode, iso3, cropMap, rows, header) {
       currencyCode,
       dataDate: latestDate,
       source: `World Bank Real Time Food Prices (estimated, national avg of ${latestRows.length} markets, ${sourceNote})`,
+      sourceKey: 'World Bank Real Time Food Prices',
       // Extra fields beyond the original writeCommodityPrice signature -
       // priceWriter.js's insert needs to accept these; see the
       // accompanying Supabase migration adding these three columns.
