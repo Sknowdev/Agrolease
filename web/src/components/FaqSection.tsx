@@ -104,9 +104,15 @@ export function FaqSection() {
               <details key={faq.question} className="group p-5 sm:p-6">
                 <summary className="flex items-center justify-between gap-3 cursor-pointer font-medium list-none">
                   {faq.question}
-                  <span className="text-foreground/40 transition-transform group-open:rotate-45" aria-hidden="true">
-                    +
-                  </span>
+                  {/* Down-facing triangle that flips to point up when expanded,
+                      replacing the rotating "+" - explicit correction 2026-07-10. */}
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 12 8"
+                    className="w-3 h-2 shrink-0 fill-foreground/50 transition-transform duration-200 group-open:rotate-180"
+                  >
+                    <path d="M6 8 0 0h12z" />
+                  </svg>
                 </summary>
                 <p className="mt-2.5 text-sm text-foreground/70">{faq.answer}</p>
               </details>

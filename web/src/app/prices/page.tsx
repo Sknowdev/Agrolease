@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function PricesIndexPage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 py-10">
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 pt-28 pb-10">
       <h1 className="text-3xl font-semibold tracking-tight">Crop Prices by Country</h1>
       <p className="mt-3 text-foreground/70 max-w-2xl">
         AgroLease market reference prices, updated regularly. Countries marked

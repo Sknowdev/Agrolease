@@ -49,7 +49,7 @@ export function SecuritySection() {
         <div className="mt-10 grid gap-5 sm:grid-cols-3">
           {STAGES.map((stage, index) => (
             <ScrollReveal key={stage.number} delayMs={index * 130}>
-              <div className="glow-border rounded-2xl bg-surface p-6 text-center">
+              <div className="glow-border rounded-2xl bg-background p-6 text-center">
                 <span className="inline-flex w-9 h-9 items-center justify-center rounded-full bg-brand-green text-white font-semibold">
                   {stage.number}
                 </span>
