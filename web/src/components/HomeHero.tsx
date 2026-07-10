@@ -15,6 +15,11 @@ import Image from 'next/image';
  * Full-bleed hero.png stays fixed as the background - only the text
  * cycles. Respects prefers-reduced-motion by disabling the auto-cycle
  * (first line stays put) - same accessibility stance as <ScrollReveal>.
+ *
+ * Headline treatment (2026-07-10): bumped to font-black (900 weight),
+ * larger/tighter size, and a slight -skew-x for a bolder, less
+ * "corporate default" feel per explicit "make the headline a little fat
+ * and wild" request.
  */
 const SLIDES = [
   {
@@ -78,7 +83,7 @@ export function HomeHero() {
         <div className="max-w-2xl min-h-[200px] sm:min-h-[220px] flex flex-col justify-center">
           <h1
             key={slide.headline}
-            className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-[#f6f1e4] [text-shadow:0_2px_16px_rgba(0,0,0,0.45)] animate-[heroFade_0.6s_ease]"
+            className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tighter -skew-x-1 leading-[0.98] text-[#f6f1e4] [text-shadow:0_3px_20px_rgba(0,0,0,0.5)] animate-[heroFade_0.6s_ease]"
           >
             {slide.headline}
           </h1>
