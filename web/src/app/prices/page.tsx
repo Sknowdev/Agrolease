@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { COUNTRIES, getCropLabel } from '@/config/countries';
+import { COUNTRIES } from '@/config/countries';
 import { getPriceSummary } from '@/lib/prices';
-import { formatCurrency } from '@/lib/trend';
+import { CommodityPriceTile } from '@/components/CommodityPriceTile';
 
 export const metadata: Metadata = {
   title: 'Crop Prices by Country',
@@ -12,15 +11,14 @@ export const metadata: Metadata = {
 };
 
 /**
- * "add the commodity price there as well" (2026-07-10): this index used
- * to list crop names as plain link pills with no price attached - a
- * visitor had to click through to /prices/{country}/{crop} to see any
- * number at all. Now a server-side price lookup runs for every
- * (country, crop) pair up front (in parallel via Promise.all, same
- * pattern as <LivePriceTicker>) and the real price renders directly on
- * this page. Pairs with no data yet (coming-soon countries, or a live
- * country whose specific crop has no rows) simply show the crop name
- * with no price attached - never a fabricated number.
+ * Correction (2026-07-10): "put price number in front of the same
+ * commodity dashboard there" - the previous version showed a small price
+ * number tucked inside a crop-name pill link. That wasn't the dashboard
+ * look used elsewhere on the site (<PriceCard>, <LivePricesWidget>) - big
+ * number, Reported/Estimated badge, trend. Replaced every crop entry with
+ * <CommodityPriceTile>, a compact version of that same dashboard tile, so
+ * this index reads as a grid of real commodity-dashboard cards grouped by
+ * country, not a list of links with a number squeezed in.
  */
 export default async function PricesIndexPage() {
   const allPairs = COUNTRIES.flatMap((country) =>
@@ -57,26 +55,16 @@ export default async function PricesIndexPage() {
                 </span>
               )}
             </h2>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {country.crops.map((crop) => {
-                const summary = priceMap.get(`${country.code}:${crop}`);
-                return (
-                  <li key={crop}>
-                    <Link
-                      href={`/prices/${country.slug}/${crop}`}
-                      className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-sm hover:bg-background transition-colors"
-                    >
-                      <span>{getCropLabel(crop)}</span>
-                      {summary && (
-                        <span className="font-semibold text-brand-green-light">
-                          {formatCurrency(summary.latest.priceLocal, country.currencySymbol)}/t
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {country.crops.map((crop) => (
+                <CommodityPriceTile
+                  key={crop}
+                  country={country}
+                  cropSlug={crop}
+                  summary={priceMap.get(`${country.code}:${crop}`) ?? null}
+                />
+              ))}
+            </div>
           </div>
         ))}
       </div>
