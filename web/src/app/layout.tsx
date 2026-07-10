@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -47,6 +48,15 @@ export default function RootLayout({
          */}
         <main className="flex-1">{children}</main>
         <SiteFooter />
+        {/*
+         * Vercel Web Analytics (2026-07-10, per request to "introduce
+         * analysis"). Cookieless, no personal data collected, works
+         * automatically since this app already deploys on Vercel - no new
+         * account, no new vendor login. Page views/visitor counts appear
+         * directly in the Vercel dashboard's Analytics tab for this
+         * project. Disclosed honestly in /privacy below.
+         */}
+        <Analytics />
       </body>
     </html>
   );

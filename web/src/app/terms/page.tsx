@@ -39,6 +39,17 @@ export default function TermsPage() {
           </p>
         </section>
         <section>
+          <h2 className="text-lg font-semibold text-foreground">Site analytics</h2>
+          <p className="mt-2">
+            AgroLease uses cookieless, aggregate web analytics (see our{' '}
+            <a href="/privacy" className="text-brand-green-light hover:underline">
+              Privacy Policy
+            </a>
+            ) to understand how the site is used. This helps us prioritize which countries and
+            crops to bring online next.
+          </p>
+        </section>
+        <section>
           <h2 className="text-lg font-semibold text-foreground">Changes</h2>
           <p className="mt-2">
             As the platform grows beyond price tracking into agreements, harvest records, and
