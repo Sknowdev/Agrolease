@@ -10,10 +10,19 @@
  * swap alone re-themes the entire site without touching component logic.
  */
 :root {
-  --background: #f6f1e4; /* warm cream */
+  --background: #f6f1e4; /* warm cream - the page's base tone */
   --foreground: #1b2a1e; /* deep green-black, not pure black */
-  --surface: #fffdf7; /* near-white card surface, sits a notch lighter than background */
-  --border: #e2d8bf; /* soft tan border */
+  /*
+   * --surface used to be #fffdf7 (near-white), only a couple of shades
+   * off --background (#f6f1e4) - on a real screen that difference reads
+   * as "basically invisible" while scrolling, which is the "I need real
+   * visual layers, it's like it never exist" complaint (2026-07-10).
+   * Changed to a visibly DARKER warm tan/beige, not a lighter near-white,
+   * so alternating sections read as distinct physical bands, and cards
+   * placed on --surface (bg-background) still contrast against it.
+   */
+  --surface: #ece1c8; /* deeper warm tan - visibly distinct from --background, not just a shade off */
+  --border: #d9c9a3; /* darkened to stay visible against the darker --surface too */
 
   --brand-green: #1f5d34; /* deep forest green - solid buttons, headings */
   --brand-green-light: #2f7a42; /* mid green - accent text, hover states. Chosen for AA contrast on cream/white, not just visual lightness */
@@ -69,18 +78,21 @@ body {
   color: var(--brand-green-light);
 }
 
-/* Card border that lifts and glows faintly on hover, instead of a flat
-   static border - used for feature cards, audience cards, etc. */
+/*
+ * Card border - explicit correction 2026-07-10: the previous version
+ * moved (translateY(-2px)) and grew a heavy glow shadow on *every* hover,
+ * on every card, everywhere on the site. The user described this as
+ * cards "rigging up" as the cursor crosses them and said it reads as an
+ * obvious AI-generated site pattern. Removed the transform/lift and the
+ * glow shadow entirely - hover now only does a quiet border-color change,
+ * no movement, no shadow bloom.
+ */
 .glow-border {
   border: 1px solid var(--border);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  transition: border-color 0.2s ease;
 }
 .glow-border:hover {
   border-color: var(--brand-green-light);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--brand-green-light) 20%, transparent),
-    0 16px 32px -16px color-mix(in srgb, var(--brand-green-light) 35%, transparent);
-  transform: translateY(-2px);
 }
 
 /* Soft blurred color field for section backgrounds - adds depth without

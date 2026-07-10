@@ -5,17 +5,16 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 /**
- * Hero (2026-07-09 correction). Previous version had a single static
- * headline block sitting on the image. The user pointed at a reference
- * screenshot and asked for a floating, cycling glass card instead -
- * i.e. the text card itself rotates through a short sequence of
- * headline/sub-line pairs on a timer, with a frosted-glass background
- * (blur + translucency), rather than one fixed sentence.
+ * Hero (2026-07-10 correction). Explicit instruction: no boxed/glass
+ * "card" around the headline - only the HEADLINE TEXT itself floats
+ * over the image, cycling through a short set of lines. No border, no
+ * background panel, no backdrop-blur, no padding box - just large type
+ * sitting directly on the photo with a text-shadow for legibility and a
+ * dark gradient scrim behind it.
  *
- * Still full-bleed hero.png as a fixed background - only the copy inside
- * the glass card cycles, the image does not move. Respects
- * prefers-reduced-motion by disabling the auto-cycle (first slide stays
- * put) - same accessibility stance as <ScrollReveal>.
+ * Full-bleed hero.png stays fixed as the background - only the text
+ * cycles. Respects prefers-reduced-motion by disabling the auto-cycle
+ * (first line stays put) - same accessibility stance as <ScrollReveal>.
  */
 const SLIDES = [
   {
@@ -70,19 +69,22 @@ export function HomeHero() {
       />
 
       <div className="relative z-10 h-full w-full flex flex-col items-start justify-end px-4 sm:px-8 lg:px-12 pb-16 sm:pb-24">
-        {/* Frosted-glass floating card - the piece that cycles. Fixed
-            min-height across slides so the card doesn't visibly resize
-            as headline length changes between slides. */}
-        <div className="max-w-2xl rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl px-6 sm:px-9 py-8 sm:py-10 shadow-2xl shadow-black/20 min-h-[220px] sm:min-h-[240px] flex flex-col justify-center">
+        {/* No card, no border, no panel - just the text itself floating on
+            the image, per explicit correction. Fixed min-height across
+            slides so surrounding content (CTAs) doesn't jump as headline
+            length changes between slides. text-shadow substitutes for the
+            gradient scrim in keeping the text legible over any part of
+            the photo. */}
+        <div className="max-w-2xl min-h-[200px] sm:min-h-[220px] flex flex-col justify-center">
           <h1
             key={slide.headline}
-            className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-[#f6f1e4] animate-[heroFade_0.6s_ease]"
+            className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-[#f6f1e4] [text-shadow:0_2px_16px_rgba(0,0,0,0.45)] animate-[heroFade_0.6s_ease]"
           >
             {slide.headline}
           </h1>
           <p
             key={slide.subline}
-            className="mt-5 text-base sm:text-lg text-[#f6f1e4]/85 max-w-xl animate-[heroFade_0.6s_ease]"
+            className="mt-5 text-base sm:text-lg text-[#f6f1e4]/90 max-w-xl [text-shadow:0_1px_10px_rgba(0,0,0,0.4)] animate-[heroFade_0.6s_ease]"
           >
             {slide.subline}
           </p>
@@ -98,7 +100,7 @@ export function HomeHero() {
                 aria-current={i === index}
                 onClick={() => setIndex(i)}
                 className={`h-1.5 rounded-full transition-all ${
-                  i === index ? 'w-6 bg-[#f6f1e4]' : 'w-1.5 bg-[#f6f1e4]/40'
+                  i === index ? 'w-6 bg-[#f6f1e4]' : 'w-1.5 bg-[#f6f1e4]/50'
                 }`}
               />
             ))}
