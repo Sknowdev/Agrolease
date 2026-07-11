@@ -28,7 +28,7 @@
 
 | # | Task | Status | Last Updated | Notes / What Was Verified |
 |---|---|---|---|---|
-| 1 | Project Scaffolding + Full Database Schema | 🔲 Ready | 2026-07-10 | Brief aligned with confirmed decisions (see `docs/CHANGE_LOG_PRODUCT_PLAN.md`): Railway dropped project-wide, extend existing Supabase project via additive migration, logo corrected to root `/logo.png`, source-masking policy reaffirmed. Not yet built. |
+| 1 | Project Scaffolding + Full Database Schema | ⚠️ Blocked (code/infra done, DB migration not yet run) | 2026-07-11 | See detailed notes below. Everything that could be built and verified locally without real Supabase credentials is done and tested. The one thing not done: actually running `0004_mobile_app_schema.sql` against the live project, because no `.env` / credentials exist in this environment. |
 | 2 | Auth + Profile ID | ⬜ Not Started | — | — |
 | 3 | Conduit Creation + Invitation | ⬜ Not Started | — | — |
 | 4 | Paystack Payment + Entitlement Engine Core | ⬜ Not Started | — | — |
@@ -50,6 +50,29 @@
 | 20 | App Store + Play Store Submission | ⬜ Not Started | — | — |
 
 ---
+
+## Task 1 — Detailed Status (2026-07-11)
+
+**What was built and verified (all ✅, tested for real, not assumed):**
+
+- Expo (TypeScript + Router) project scaffolded at the repo root with the exact folder structure specified: `/app`, `/components`, `/components/coming-soon`, `/hooks`, `/lib`, `/constants`, `/backend` (+ `/routes`, `/services`, `/middleware`, `/db`), `/scraper` (untouched, pre-existing), `/satellite` (placeholder).
+- All specified packages installed via `npx expo install` (SDK-compatible versions resolved automatically, not guessed): `expo-router`, `@supabase/supabase-js`, `expo-image-picker`, `expo-camera`, `expo-notifications`, `react-native-maps`, `expo-location`, `react-native-paystack-webview` (checked npm registry publish dates for 4 candidate Paystack RN libraries — this one is the only actively maintained one, see `docs/CHANGE_LOG_PRODUCT_PLAN.md`).
+- `app.json` configured: name "AgroLease", icon/splash pointing at root `/logo.png` (confirmed the real 2.1MB file is bundled — verified via a real `expo export --platform web` run, which reported bundling `logo.6472aeead42f4912262e5f98f221a6c7.png (2.1MB)`), iOS bundle ID `com.agrolease.app`, Android package `com.agrolease.app`.
+- `npx tsc --noEmit` — 0 errors.
+- `npx expo export --platform web` — real Metro bundle succeeded, 776 modules, no errors.
+- `eas.json` configured with `development`/`preview`/`production` build profiles for iOS + Android — config only, no build triggered.
+- `supabase/migrations/0004_mobile_app_schema.sql` + rollback written: additive `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for `country_config` (only the 3 columns genuinely missing — see note below), fresh `CREATE TABLE` for every other listed table including all Sponsorship/Entitlement tables, the `entitlement_revisions` enforcement trigger, all 10 specified indexes, RLS enabled on every new table with no public policy.
+- Nigeria row `UPDATE` statement included in the same migration (not a new INSERT) — only touches the 4 mobile-app columns, leaves `currency_code`/`timezone`/`price_feed_source`/etc. untouched.
+- Backend (`/backend`): plain Fastify + Node, no platform SDK. `npm run dev` tested locally — `curl http://localhost:4000/health` → real `200` with JSON body. `Dockerfile` built successfully (`docker build`) and the containerized server also verified to return `200` on `/health` (tested via `--network host`, since this sandbox's rootless bridge networking doesn't forward `-p` ports — confirmed the app itself works correctly either way).
+- Grepped all new app/backend/lib/constants code for hardcoded source/exchange/government names (FMARD, DEFRA, NBS, WFP, KilimoSTAT, GCX, DAFF, CONAB) — zero matches, source-masking policy holds.
+
+**What is NOT done — genuinely blocked, not skipped:**
+
+- **The migration has not been run against the real Supabase project.** This sandbox has no root `.env` and no `SUPABASE_*` environment variables — confirmed by direct filesystem/env search, not assumed. Per `requirements.md`, credentials only exist in the gitignored `.env`, which was never supplied here. **Someone with real credentials needs to run `supabase/migrations/0004_mobile_app_schema.sql` in the Supabase SQL editor** (or via CLI) before this task can be marked ✅ Complete & Confirmed. Until that happens: every table in the schema above exists only as SQL text in this repo, not as real tables in Supabase.
+- Because the migration hasn't run, these specific checklist items from the task brief are **unverified, not failed**: "every new table exists in Supabase," "all 10 indexes created," "Nigeria's row has the 4 new columns populated," "the price website still loads correctly after the migration," "all 19 pre-existing rows are still present."
+- App boot on an actual iOS simulator / Android emulator was not tested (no simulator/emulator available in this sandbox) — the equivalent web bundle export was tested instead and succeeded; this is a lower-confidence substitute for the real checklist item, not equivalent to it.
+
+**To unblock:** supply real Supabase credentials (copy `.env.example` → `.env` at repo root, fill in `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`), then either run the migration file directly in the Supabase SQL editor, or hand it back to an agent with those credentials present so it can run it and re-verify the checklist for real.
 
 ## Notes for Whoever Picks This Up
 

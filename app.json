@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "AgroLease",
+    "slug": "agrolease",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "agrolease",
+    "userInterfaceStyle": "automatic",
+    "icon": "./logo.png",
+    "splash": {
+      "image": "./logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "bundleIdentifier": "com.agrolease.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.agrolease.app"
+    },
+    "web": {
+      "favicon": "./logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-camera",
+      "expo-location",
+      "expo-notifications",
+      "expo-image-picker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
