@@ -28,7 +28,7 @@
 
 | # | Task | Status | Last Updated | Notes / What Was Verified |
 |---|---|---|---|---|
-| 1 | Project Scaffolding + Full Database Schema | 🔲 Ready | — | Brief attached: `Task-01-Scaffolding-Database.md` |
+| 1 | Project Scaffolding + Full Database Schema | 🔲 Ready | 2026-07-10 | Brief aligned with confirmed decisions (see `docs/CHANGE_LOG_PRODUCT_PLAN.md`): Railway dropped project-wide, extend existing Supabase project via additive migration, logo corrected to root `/logo.png`, source-masking policy reaffirmed. Not yet built. |
 | 2 | Auth + Profile ID | ⬜ Not Started | — | — |
 | 3 | Conduit Creation + Invitation | ⬜ Not Started | — | — |
 | 4 | Paystack Payment + Entitlement Engine Core | ⬜ Not Started | — | — |
@@ -55,4 +55,6 @@
 
 - This numbering follows the original Agent Build Brief's phase order, with two additions: **Task 16 (Legal Readiness)** and **Task 17 (Discovery)** are now real build tasks, not "Coming Soon" placeholders — per the Year-1 "ship everything" decision. Task 18's Coming Soon list shrank accordingly — it now only covers things that genuinely can't ship without hardware or a trained AI model (weighbridge, AI geospatial matching, AI crop stress analysis, historical time-lapse, Planet Labs upgrade).
 - Task 4 folds in the Entitlement Engine core (not just Paystack) because the Sponsorship overlay doc requires the payment wall to check entitlement status from day one, not be retrofitted later.
-- Logo/brand assets are already in the repo (`App_logo.png` + companion file). No task in this list should generate, replace, or touch those.
+- **Logo — corrected 2026-07-10:** the real logo is `/logo.png` at the **repo root** (not `App_logo.png` — that name doesn't exist in this repo). A *different* logo also exists at `web/public/logo.png`, belonging to the public price website — do not use that one for the mobile app. No task in this list should generate, replace, or touch either file.
+- **This repo also contains a separate, already-shipped product** — the public price website (`/web`, `/scraper`, deployed on Vercel + Supabase) — built before Task 1 started. See `docs/CHANGE_LOG_PRODUCT_PLAN.md` for the full account of what it is, why it exists, and every place its decisions (stack, sourcing, schema) diverge from these task briefs' original assumptions. Task 1 has already been edited to account for it (extends the same Supabase project via an additive migration, doesn't touch the existing `country_config` rows). Read that change log before starting any task that touches shared infrastructure (Supabase project, `country_config`, hosting).
+- **Railway is dropped project-wide** (not just for the price website) — see `docs/CHANGE_LOG_PRODUCT_PLAN.md`. Long-term hosting direction is AWS. Task 1's backend is built container-first (Dockerfile) specifically so this move is easy later.

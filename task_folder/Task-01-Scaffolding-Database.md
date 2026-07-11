@@ -10,9 +10,11 @@ Stand up the AgroLease Nigeria project: repo structure, dependencies, the comple
 
 ## Before You Start
 
-- `App_logo.png` and its companion file are already in the repo. **Do not generate, replace, redraw, or modify any logo/icon/splash asset.** When configuring `app.json`, point the icon and splash config at the existing files — locate them in the repo rather than assuming a path, and ask if it's ambiguous.
+- **Logo asset (corrected 2026-07-10):** the real logo is `/logo.png` at the **repo root** — confirmed present, 2.1MB PNG. There is no `App_logo.png` anywhere in this repo; that filename in the original brief was wrong. There is a *different* logo file at `web/public/logo.png` — that one belongs to the public price website (Track B) and **must not be reused or referenced for the mobile app**. Point `app.json`'s icon/splash config at root `/logo.png` only. **Do not generate, replace, redraw, or modify either logo file.**
 - Do not scaffold any screens beyond what Expo Router requires by default. No auth flow, no dashboard, no gate logging — that's Task 2 onward.
 - The schema below is intentionally the *full* schema, including Sponsorship & Entitlement tables that no feature uses yet. Building it once now avoids a retrofit later — don't skip or defer any table.
+- **Source attribution policy (reaffirmed 2026-07-10):** per the Product Plan, no exchange name, government body, or data source name is ever shown to an app user. All commodity prices are presented only as "AgroLease market reference prices." This applies strictly to this mobile app. If any future task deviates from this, it must be logged in `docs/CHANGE_LOG_PRODUCT_PLAN.md` with reasoning — never a silent change.
+- **This task extends, not replaces, the existing repo and Supabase project.** This repo already contains a separate, shipped product (the public price website in `/web` + `/scraper`, deployed on Vercel + Supabase). Task 1 adds the mobile app *alongside* it in the same repo/project — see the Supabase and hosting notes in Steps 5, 6, and 8 below before touching anything.
 
 ---
 
@@ -36,11 +38,15 @@ Stand up the AgroLease Nigeria project: repo structure, dependencies, the comple
    /satellite               — Satellite bot (separate deployable)
    ```
 3. **Install:** `expo-router`, `@supabase/supabase-js`, `expo-image-picker`, `expo-camera`, `expo-notifications`, `react-native-maps`, `expo-location`, `react-native-paystack` (or current maintained Paystack RN library — check for the actively maintained package first).
-4. **Configure `app.json`:** app name "AgroLease", icon/splash referencing the existing repo logo asset, iOS bundle ID `com.agrolease.app`, Android package `com.agrolease.app`.
-5. **Supabase:** create the project if one doesn't exist yet (ask first if you're unsure whether one's already provisioned).
-6. **Run the full schema migration below** — every table, one migration pass.
-7. **Seed `country_config`** with the Nigeria row (below).
-8. **Deploy an empty Fastify server to Railway** with a `/health` route returning `200`.
+4. **Configure `app.json`:** app name "AgroLease", icon/splash referencing root `/logo.png` (see "Before You Start" above — not `web/public/logo.png`), iOS bundle ID `com.agrolease.app`, Android package `com.agrolease.app`.
+5. **Supabase — extend the existing project, do not create a new one.** One project already exists (`ovfopqzjneuxxtyxmiri.supabase.co`), currently serving the price website. Confirmed decision: this task extends that same project with the full schema below rather than provisioning a separate one. Credentials are in the repo's root `.env` (gitignored) — ask the founder directly if they're not accessible in your environment; do not create a second project as a workaround.
+6. **Run the full schema migration below as an additive migration, not a fresh `CREATE TABLE` pass for `country_config`.** That table already exists (from the price website's `0001_init.sql`) with 19 real rows and a simpler column set (`id, country_code, country_name, currency_code, currency_symbol, price_feed_source, price_feed_method, update_frequency, timezone, utc_offset_hours, active, created_at`). For `country_config` specifically:
+   - Use `ALTER TABLE country_config ADD COLUMN IF NOT EXISTS ...` for every new column this task needs (`overwrite_fee_floor_local`, `scrape_utc_hour`, `payment_provider`, `payment_provider_public_key`), each nullable with no default that would silently populate real countries with fake values.
+   - Do **not** drop, truncate, or recreate `country_config` — the price website reads from it live.
+   - Every other table in the schema below (`profiles`, `conduits`, `harvest_records`, all Sponsorship/Entitlement tables, etc.) is genuinely new — create those fresh, one migration pass, exactly as specified.
+   - Write this as a new numbered migration file (e.g. `supabase/migrations/0004_mobile_app_schema.sql`) plus its rollback, following the same pattern as the existing `0001`–`0003` migrations already in this repo.
+7. **Update, don't insert, the Nigeria row in `country_config`.** A Nigeria row (`country_code = 'NG'`) already exists from the price website seed. Update that existing row's new mobile-app-specific columns (`overwrite_fee_floor_local`, `scrape_utc_hour`, `payment_provider`, `payment_provider_public_key` — values below) rather than inserting a duplicate. Leave every other existing country row's new columns `NULL` — do not populate them with guessed values, and do not set any other country's mobile-app `active` flag. (Note: the price website's own `active`/`live` semantics for those 18 other rows are unrelated to and unaffected by this — they keep working for the website regardless.)
+8. **Deploy an empty Fastify server — platform-agnostic, not Railway.** Confirmed decision: Railway is dropped entirely from this project. The long-term direction is consolidating hosting onto AWS, but that migration is explicitly *not* part of this task — build the Fastify server as a plain, portable, containerized Node app (a `Dockerfile` + no platform-specific SDKs or config baked in) so it can run locally now and move to AWS (ECS/Fargate/EC2) later with no rework. For this task, it only needs to run and respond locally (`npm run dev` / `docker run`, `/health` → `200`) — do not create any new hosting account or deploy to a live URL yet. That's a deliberate, separate decision point, not something to default into.
 9. **Set up EAS** for iOS + Android builds — config only, no build triggered yet.
 
 ---
@@ -257,29 +263,33 @@ CREATE INDEX idx_entitlement_access_denials_profile ON entitlement_access_denial
 
 ---
 
-## Nigeria Seed Row (`country_config`)
+## Nigeria Row Update (`country_config`, `country_code = 'NG'`, existing row)
+
+Update these columns on the existing Nigeria row (do not insert a new row — see Step 7):
 
 ```
-currency_code: NGN, currency_symbol: ₦
-price_feed_source: FMARD
 overwrite_fee_floor_local: 100000
-timezone: Africa/Lagos, utc_offset_hours: 1
 scrape_utc_hour: 2   (3AM WAT = 2AM UTC)
 payment_provider: paystack
-active: true
+payment_provider_public_key: (leave NULL until real Paystack keys are supplied)
 ```
-All other countries: do not insert rows yet — Nigeria only for now.
+
+Note: `currency_code`, `currency_symbol`, `timezone`, `utc_offset_hours` already exist correctly on this row from the price website's seed (NGN, ₦, Africa/Lagos, 1) — do not overwrite them. `price_feed_source` on the existing row currently reflects the price website's real working source (NBS Food Price Tracking, not FMARD — FMARD was found dead, see `docs/CHANGE_LOG_PRODUCT_PLAN.md` §3); leave that column alone, since the mobile app's own price-feed logic (Task 14) is a separate concern from what this column currently drives.
+
+All other countries: their new mobile-app columns stay `NULL`. Do not insert rows for them, and do not touch their existing website-facing columns.
 
 ---
 
 ## Test Before Marking Complete
 
-- [ ] `/health` endpoint on Railway returns `200`
-- [ ] Every table listed above exists in Supabase with the correct columns and types
+- [ ] `/health` endpoint returns `200` when the Fastify server is run locally (via `npm run dev` and via its `Dockerfile`) — no Railway or other hosting account required for this task
+- [ ] Every new table listed above exists in Supabase with the correct columns and types
+- [ ] `country_config` was altered in place (new columns added), not dropped/recreated — confirm all 19 pre-existing rows are still present and the price website (`agrolease.xyz/prices/...`) still loads correctly after the migration
 - [ ] All 10 indexes created
-- [ ] Nigeria row present and `active: true` in `country_config`, no other country rows exist yet
-- [ ] App boots on iOS simulator and Android emulator, showing the existing repo logo as icon/splash (not a placeholder)
+- [ ] Nigeria's existing `country_config` row has the 4 new mobile-app columns populated (per the table above); every other existing row has those same 4 columns present but `NULL`
+- [ ] App boots on iOS simulator and Android emulator, showing root `/logo.png` as icon/splash (not `web/public/logo.png`, not a placeholder)
 - [ ] `eas.json` is configured for iOS + Android production profiles (no build submitted yet)
+- [ ] No source/exchange/government name (e.g. "FMARD", "DEFRA") is hardcoded anywhere in app-facing strings — confirm against the Source Attribution Policy above
 
 ---
 
