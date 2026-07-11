@@ -1,5 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
-import 'dotenv/config';
+import { config as loadDotenv } from 'dotenv';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+/**
+ * Bug fix (2026-07-11): plain `import 'dotenv/config'` resolves `.env`
+ * relative to the current working directory the process was launched
+ * from - not this file's location. The real `.env` lives at the repo
+ * root, but every npm script in this package (`scrape:nigeria`, etc.)
+ * runs with `scraper/` as the cwd, so dotenv silently found nothing and
+ * every source failed with "Missing Supabase credentials" even though
+ * real credentials exist. Load `.env` from the repo root explicitly
+ * (two directories up from this file: scraper/src/lib -> repo root),
+ * so this works the same regardless of which directory the command is
+ * actually run from.
+ */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT_ENV = path.resolve(__dirname, '..', '..', '..', '.env');
+loadDotenv({ path: REPO_ROOT_ENV });
 
 /**
  * The scraper always writes with the service role key because it needs to
