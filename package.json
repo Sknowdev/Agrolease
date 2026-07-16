@@ -8,7 +8,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "backend:install": "npm install --prefix backend",
+    "backend:dev": "npm run dev --prefix backend"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",

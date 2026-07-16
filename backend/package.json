@@ -2,7 +2,7 @@
   "name": "agrolease-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "AgroLease mobile app API. Plain, portable, containerized Node/Fastify service - no platform-specific SDK baked in (Railway dropped project-wide; long-term direction is AWS, but not part of Task 1). Runs locally now via npm run dev or its Dockerfile.",
+  "description": "AgroLease mobile app API. Plain, portable, containerized Node/Fastify service - no platform-specific SDK baked in (Railway dropped project-wide; long-term direction is AWS, but not part of Task 1). This is a SEPARATE npm project from the repo root (same pattern as /scraper and /web) - running `npm install` at the repo root does NOT install these dependencies. Either `cd backend && npm install && npm run dev`, or from the repo root: `npm run backend:install` then `npm run backend:dev`.",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
