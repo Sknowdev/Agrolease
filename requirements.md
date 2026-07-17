@@ -171,3 +171,34 @@ migration or a new scraper source without it immediately affecting
 production data. Worth creating a real second project before making any
 future change that isn't already verified safe (e.g. a schema migration
 that drops/renames a column).
+
+
+## 6. Mobile app (Track A) — Supabase Auth setup for Task 2
+
+**Scope note:** everything above in this file (Sections 1–5) is about Track B (`/web`, `/scraper`) — the already-live public price website. This section is about Track A, the mobile app (`/app`, `/backend`), specifically what Task 2 (Auth + Profile ID) needs configured in the **same** Supabase project's **Authentication** settings. None of this is achievable from a code change in this repo — it's dashboard configuration only, done once by whoever holds real Supabase credentials.
+
+### 6.1 Enable auth providers
+
+In the Supabase dashboard → **Authentication** → **Providers**:
+
+1. **Email** — enable, with **Confirm email** left as a one-time verification code flow (Task 2's Step 4 "Verification" screen sends/checks this). Under **Authentication → Emails**, the confirmation template can stay default for now — no task requires custom copy yet.
+2. **Phone** — enable, with **password-based** phone auth (a phone number as the identifier + a password), not OTP-only sign-in. Requires an SMS provider to be configured under **Authentication → Providers → Phone** (e.g. Twilio, MessageBird, Vonage — pick one and supply its credentials as environment variables in the dashboard, never committed to this repo). Both the sign-up OTP (Step 4) and Forgot Password's "Reset via SMS" (Steps 13–15) depend on this being live.
+3. **Google** — enable under **Authentication → Providers → Google**, with a real OAuth Client ID/Secret from the Google Cloud Console. The redirect URI Supabase generates (`https://<project-ref>.supabase.co/auth/v1/callback`) must be added to the Google Cloud OAuth client's **Authorized redirect URIs** list. The mobile app additionally needs its own `agrolease://` custom scheme registered as an allowed redirect in **Authentication → URL Configuration → Redirect URLs** (already declared in `app.json`'s `"scheme": "agrolease"` — no app-side change needed once the dashboard is configured).
+
+### 6.2 Redirect / deep link configuration
+
+Under **Authentication → URL Configuration**:
+- **Site URL**: not meaningfully used by a mobile-only app, but Supabase requires a value — set to the eventual production API/marketing URL once one exists; a placeholder is fine until then.
+- **Redirect URLs**: add `agrolease://` (matches `app.json`'s scheme) so Google OAuth and any email-link flows can return control to the app.
+
+### 6.3 What does NOT need dashboard config
+
+- Verification **codes** (email 6-digit / phone OTP) are handled by Supabase Auth's own built-in confirmation flow — no separate service or table needed for this.
+- `profiles` is a separate application table (not `auth.users`) — Supabase Auth's own settings have no bearing on its columns. The app writes to it after a successful `auth.users` sign-up, per Task 2's own instructions.
+
+### 6.4 Current status (2026-07-17)
+
+**Not yet configured** — no agent session so far has held real Supabase dashboard credentials (same gap as the still-unrun `0004_mobile_app_schema.sql` migration, see `task_app_progress.md`). Task 2's code is written to call these providers correctly (`supabase.auth.signUp`, `signInWithPassword`, `signInWithOAuth({ provider: 'google' })`, `verifyOtp`, `resetPasswordForEmail`), but none of it can be tested end-to-end against a real project until:
+1. Email, Phone, and Google providers are enabled as described above, and
+2. A real SMS provider is wired in for phone OTP/reset, and
+3. `0004_mobile_app_schema.sql` and `0005_task2_auth_profile.sql` have both been run so `profiles`/`security_officers`/etc. actually exist to write into.

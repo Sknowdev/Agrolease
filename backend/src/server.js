@@ -5,6 +5,9 @@ import dotenv from 'dotenv';
 import Fastify from 'fastify';
 
 import healthRoute from './routes/health.js';
+import homeRoute from './routes/home.js';
+import profilesRoute from './routes/profiles.js';
+import securityRoute from './routes/security.js';
 
 // Load the repo root .env explicitly, resolved relative to this file's
 // own location (not process.cwd()) - same fix already applied to
@@ -31,6 +34,13 @@ const HOST = process.env.BACKEND_HOST ?? '0.0.0.0';
 function buildServer() {
   const app = Fastify({ logger: true });
   app.register(healthRoute);
+  // Task 2 routes - all under /v1/ per the Constitution's API
+  // versioning rule ("A URL without a version prefix will never exist
+  // in production" - /health is the one pre-existing exception from
+  // Task 1, kept as-is rather than retroactively versioning it).
+  app.register(profilesRoute);
+  app.register(securityRoute);
+  app.register(homeRoute);
   return app;
 }
 
