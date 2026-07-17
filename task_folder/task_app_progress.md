@@ -28,7 +28,7 @@
 
 | # | Task | Status | Last Updated | Notes / What Was Verified |
 |---|---|---|---|---|
-| 1 | Project Scaffolding + Full Database Schema | ⚠️ Blocked (code/infra done, DB migration not yet run) | 2026-07-11 | See detailed notes below. Everything that could be built and verified locally without real Supabase credentials is done and tested. The one thing not done: actually running `0004_mobile_app_schema.sql` against the live project, because no `.env` / credentials exist in this environment. |
+| 1 | Project Scaffolding + Full Database Schema | ⚠️ Blocked (app confirmed booting; DB migration still not run) | 2026-07-16 | App confirmed booting for real (SDK 54, web preview screenshot from founder's own Codespace — real logo/title/subtitle render). Physical-device test via Expo Go isolated to a pure networking/URL issue (port visibility + wrong internal IP), not an app bug — fix given, retry pending. Remaining real blocker unchanged: `0004_mobile_app_schema.sql` has not been run against the live Supabase project (no credentials available to any agent so far). See detailed notes below. |
 | 2 | Auth + Profile ID | ⬜ Not Started | — | — |
 | 3 | Conduit Creation + Invitation | ⬜ Not Started | — | — |
 | 4 | Paystack Payment + Entitlement Engine Core | ⬜ Not Started | — | — |
@@ -91,17 +91,24 @@
 - Switched approach to Codespaces' own native port forwarding instead (`npx expo start` without `--tunnel`, forward port 8081 as Public in the Ports panel, open the forwarded URL). Founder tried this and hit a second, unrelated bug: root `package.json` was **missing its `"main": "expo-router/entry"` line** (lost during earlier manual SDK-54 edits in the Codespace, before the exact-version fix above was applied there) — without it, Expo falls back to its legacy default entry point, which looks for a root `App.tsx` that doesn't exist in this Expo-Router-based project, causing `Unable to resolve "../../App"` bundling errors. Founder confirmed via `grep '"main"' package.json` printing nothing, and was told to add the line back + clear Metro's cache (`rm -rf .expo node_modules/.cache && npx expo start --clear`) and retry.
 - **Session ended before the fix above was confirmed working on the founder's actual iPhone.** This is the single next step to actually close out Task 1's device-boot verification.
 
+## Update — 2026-07-16 (later same day) — Web preview confirmed booting; device test isolated to a pure networking issue
+
+**Confirmed via a real screenshot from the founder's own Codespace web preview** (not assumed, not the agent's sandbox this time): the app **does boot correctly** — real AgroLease logo renders, "AgroLease" title, "Project scaffolding - Task 1" subtitle, matches exactly what Task 1's brief specifies. This confirms the SDK 54 downgrade and the `"main": "expo-router/entry"` fix both worked as intended. **The app itself is no longer in question.**
+
+**What's still open is narrower than before — pure Codespaces networking, not app code:**
+- Founder tried opening the app in Expo Go on their iPhone and got "the request timed out," using `exp://10.0.0.200:8081`.
+- Root cause identified from the founder's own Ports panel screenshot: two separate problems, both confirmed, neither an app bug —
+  1. Port 8081 was set to **Private** visibility in Codespaces — private ports are only reachable from inside the founder's own authenticated GitHub session, never from an external device like a phone (confirmed via GitHub's own port-forwarding docs).
+  2. The URL used, `exp://10.0.0.200:8081`, is Metro's **internal container-network IP** — meaningless outside the Codespace, regardless of visibility setting. The real reachable address is the `*.app.github.dev` hostname Codespaces generates when forwarding the port (visible in the Ports panel's "Forwarded Address" column).
+- Founder was told to: set port 8081 to Public, copy the real forwarded `https://...app.github.dev` URL from that panel, and enter it in Expo Go as `exp://...app.github.dev` (swapping only the scheme) via "Enter URL manually" — not a QR scan, since LAN mode's QR doesn't point at the Codespaces-forwarded host automatically.
+- **Session ended before the founder retried with the corrected public URL.** This is now the single remaining step to close out device-boot verification — not a code fix, a one-setting-change + correct-URL retry.
+
 ### TODO — next session, in order
 
-1. **Confirm the founder's Codespace `package.json` now has `"main": "expo-router/entry"` on line 5** (or wherever) — re-check with `grep '"main"' package.json` before doing anything else. If it's still missing, add it back.
-2. **Clear Metro's cache and restart clean** in the Codespace: `rm -rf .expo node_modules/.cache && npx expo start` (no `--tunnel` — that path is confirmed dead, see above).
-3. **Re-forward port 8081 as Public** in the Codespaces Ports panel (this resets sometimes between restarts).
-4. **On the founder's iPhone, in Expo Go**, use "Enter URL manually" with `exp://<the-forwarded-codespaces-hostname>` (swap `https://` for `exp://`) — not a QR scan, since there's no QR code in LAN mode pointing at the right forwarded host automatically.
-5. **If it loads:** confirm the AgroLease logo/title/subtitle render correctly on the real device. That closes out the one remaining unverified item in Task 1's checklist (device boot). Update this file's Task 1 status to reflect that specific item as ✅ verified (the Supabase migration itself is a separate, still-open blocker — see above, don't conflate the two).
-6. **If it still fails:** get the exact new error text (from both the Codespace terminal and the phone screen) before guessing further — every fix so far in this saga came from reading the literal error, not assumption.
-7. **Once device boot is confirmed:** decide on the non-square logo/icon issue from `expo-doctor` (crop vs. explicitly accept as-is) — small, but it's the only other open item before Task 1 can honestly be marked fully ✅ Complete & Confirmed (still separately blocked on the Supabase migration itself, which is a founder-side action, not an agent one).
-8. **Push current branch state to `feature/task1-scaffolding-database` (PR #19)** — the SDK 54 downgrade (`package.json`/`package-lock.json`) and this progress-file update are uncommitted as of session end; commit and push them before starting anything else.
-9. **Task 2 (`Task-02-Auth-ProfileID.md`, already pushed directly to `main` by the founder) starts on a brand-new branch** — explicitly NOT `feature/task1-scaffolding-database`. Pull `main` first to get the real brief content, create e.g. `feature/task2-auth-profile-id`, then build there.
+1. **Confirm the founder retried Expo Go with the port set to Public and the correct `exp://<hostname>.app.github.dev` URL** (not the internal IP). If it worked, device-boot verification is done — update the table row below and this section to ✅ for that specific item.
+2. **If it still fails after the visibility + URL fix:** get the exact new error text again before guessing further (same discipline as every other fix in this saga — read the literal error first).
+3. **Once device boot is confirmed:** decide on the non-square logo/icon issue from `expo-doctor` (crop vs. explicitly accept as-is) — the only other open item before Task 1 can honestly be marked fully ✅ Complete & Confirmed (still separately blocked on the Supabase migration itself — see the original 2026-07-11 blocker note above, that's a founder-side action needing real credentials, unrelated to any of this session's work).
+4. **Task 2 (`Task-02-Auth-ProfileID.md`, already pushed directly to `main` by the founder) starts on a brand-new branch** — explicitly NOT `feature/task1-scaffolding-database`. Pull `main` first to get the real brief content, create e.g. `feature/task2-auth-profile-id`, then build there.
 
 ## Notes for Whoever Picks This Up
 
