@@ -1,0 +1,4 @@
+# Backend-side migration references / query helpers go here.
+# The actual SQL migration files live in supabase/migrations/ (repo root),
+# matching the existing pattern for 0001-0003 - this folder is reserved
+# for any backend-side migration runner/tooling added in a later task.

@@ -24,3 +24,17 @@ nul
 # Logs
 *.log
 npm-debug.log*
+
+# Expo / mobile app (root)
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+*.tsbuildinfo
+/ios
+/android
+.metro-health-check*
+
+# Backend (Fastify)
+backend/node_modules/
+backend/dist/
