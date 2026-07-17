@@ -29,7 +29,7 @@
 | # | Task | Status | Last Updated | Notes / What Was Verified |
 |---|---|---|---|---|
 | 1 | Project Scaffolding + Full Database Schema | ⚠️ Blocked (app confirmed booting; DB migration still not run) | 2026-07-16 | App confirmed booting for real (SDK 54, web preview screenshot from founder's own Codespace — real logo/title/subtitle render). Physical-device test via Expo Go isolated to a pure networking/URL issue (port visibility + wrong internal IP), not an app bug — fix given, retry pending. Remaining real blocker unchanged: `0004_mobile_app_schema.sql` has not been run against the live Supabase project (no credentials available to any agent so far). See detailed notes below. |
-| 2 | Auth + Profile ID | ⬜ Not Started | — | — |
+| 2 | Auth + Profile ID | 🔲 Ready (Revised v5) | 2026-07-16 | Brief: `Task-02-Auth-ProfileID.md`. Role Selection removed per Amendment 7. Home + My Conduits built as real zero-states per Amendment 8 (not a generic "Dashboard stub"). Conduit Workspace explicitly excluded — nothing to open until Task 3. **Not yet built** — next session should start this on a brand-new branch (not `feature/task1-scaffolding-database`). |
 | 3 | Conduit Creation + Invitation | ⬜ Not Started | — | — |
 | 4 | Paystack Payment + Entitlement Engine Core | ⬜ Not Started | — | — |
 | 5 | Security Officer System | ⬜ Not Started | — | — |
@@ -103,15 +103,29 @@
 - Founder was told to: set port 8081 to Public, copy the real forwarded `https://...app.github.dev` URL from that panel, and enter it in Expo Go as `exp://...app.github.dev` (swapping only the scheme) via "Enter URL manually" — not a QR scan, since LAN mode's QR doesn't point at the Codespaces-forwarded host automatically.
 - **Session ended before the founder retried with the corrected public URL.** This is now the single remaining step to close out device-boot verification — not a code fix, a one-setting-change + correct-URL retry.
 
+## Update — 2026-07-16 (end of day) — Task 1 device boot confirmed by founder; moving to Task 2
+
+**Founder confirmed directly:** the app works correctly end-to-end via the Codespaces web preview and on-device testing was only blocked by the founder's own internet connection that day, not by anything in the app/config. The SDK 54 downgrade, the `main` field fix, and the port-visibility/URL fix (all logged above) are the complete, correct set of fixes — nothing further needed on that front for now.
+
+**Founder is moving to Task 2 in a new session.** Per explicit instruction: **Task 2 must be built on a brand-new branch, never on `feature/task1-scaffolding-database` (PR #19)**. That branch/PR stays scoped to Task 1 only.
+
+**Important — duplicate/stale files exist on `main` right now, created by re-uploading files via GitHub's web UI.** Whoever starts Task 2 should be aware:
+- `task_folder/task_app_progress (1).md` exists on `main` as a **duplicate** of this file, from an earlier partial re-upload. **This file (`task_app_progress.md`, no suffix) is the one being kept up to date and is the authoritative one** — the `(1)` copy on `main` is stale/out of sync with this one (it doesn't know Task 1 was ever built or verified) and should be deleted next time anyone is doing repo cleanup on `main` directly. Do not read or update the `(1)` copy.
+- `docs/AGROLEASE_PRODUCT_PLAN_AMENDMENTS.md` was renamed on `main` to `docs/AgroLease-Product-Plan-Amendments.md` (same content, just a different filename/casing). This change log's own Section 14 above still references the old filename — that's now stale text, not a broken link to fix in code, just something to mentally substitute when reading Section 14.
+- See `HANDOFF.md` at the repo root for the full picture and exactly which files to open for Task 2.
+
 ### TODO — next session, in order
 
-1. **Confirm the founder retried Expo Go with the port set to Public and the correct `exp://<hostname>.app.github.dev` URL** (not the internal IP). If it worked, device-boot verification is done — update the table row below and this section to ✅ for that specific item.
-2. **If it still fails after the visibility + URL fix:** get the exact new error text again before guessing further (same discipline as every other fix in this saga — read the literal error first).
-3. **Once device boot is confirmed:** decide on the non-square logo/icon issue from `expo-doctor` (crop vs. explicitly accept as-is) — the only other open item before Task 1 can honestly be marked fully ✅ Complete & Confirmed (still separately blocked on the Supabase migration itself — see the original 2026-07-11 blocker note above, that's a founder-side action needing real credentials, unrelated to any of this session's work).
-4. **Task 2 (`Task-02-Auth-ProfileID.md`, already pushed directly to `main` by the founder) starts on a brand-new branch** — explicitly NOT `feature/task1-scaffolding-database`. Pull `main` first to get the real brief content, create e.g. `feature/task2-auth-profile-id`, then build there.
+1. **Read `HANDOFF.md` at the repo root first**, before anything else.
+2. **Pull `main`** to get `docs/AgroLease-Product-Plan-Amendments.md` (Amendments 1–10) and `task_folder/Task-02-Auth-ProfileID.md` (the real Task 2 brief, revision v5) — neither exists on the Task 1 branch.
+3. **Create a new branch off `main`** (e.g. `feature/task2-auth-profile-id`) — do not reuse or push to `feature/task1-scaffolding-database`.
+4. **Read `Task-02-Auth-ProfileID.md` in full**, plus Amendments 7, 8, and 9 in the amendments log (role removal, Home/My Conduits/Conduit Workspace split, Conduit Settings menu structure) — Task 2's brief already reflects these, but the amendments give the "why" if anything is ambiguous while building.
+5. **Confirm Task 1's actual state before assuming its schema is live**: code/scaffolding is done and pushed (PR #19), but **the Supabase migration (`0004_mobile_app_schema.sql`) still may not have been run against the real project** — check with the founder directly before Task 2 assumes any mobile-app table (`profiles`, etc.) actually exists in the live database. Task 2's own brief requires an `ALTER TABLE profiles DROP COLUMN IF EXISTS account_role;` step — this only makes sense once `profiles` actually exists.
+6. **Build Task 2 per its brief**, test against its own checklist, update this file (the no-suffix `task_app_progress.md`, not the `(1)` copy) honestly — ✅ only for what's actually verified, ⚠️ Blocked with specifics for anything that isn't.
 
 ## Notes for Whoever Picks This Up
 
+- **Read `docs/AgroLease-Product-Plan-Amendments.md` before starting any task numbered 2 or higher.** It's a living, additive log (10 amendments as of 2026-07-16) that changes real details of the original planning docs without editing them directly. The ones that matter most right now: Amendment 7 (account-level Role Selection removed entirely — do not build it), Amendment 8 (Home / My Conduits / Conduit Workspace are three distinct screens with non-overlapping content, not one dashboard), Amendment 9 (Conduit Settings menu structure, for later tasks), Amendment 10 (per-party auto-renewal via Paystack, relevant to Task 4 not Task 2). Amendments 1–6 concern the AI price engine (Task 14, scoped to Track A only — see Section 14 above) and weight-recording rules (Task 6).
 - This numbering follows the original Agent Build Brief's phase order, with two additions: **Task 16 (Legal Readiness)** and **Task 17 (Discovery)** are now real build tasks, not "Coming Soon" placeholders — per the Year-1 "ship everything" decision. Task 18's Coming Soon list shrank accordingly — it now only covers things that genuinely can't ship without hardware or a trained AI model (weighbridge, AI geospatial matching, AI crop stress analysis, historical time-lapse, Planet Labs upgrade).
 - Task 4 folds in the Entitlement Engine core (not just Paystack) because the Sponsorship overlay doc requires the payment wall to check entitlement status from day one, not be retrofitted later.
 - **Logo — corrected 2026-07-10:** the real logo is `/logo.png` at the **repo root** (not `App_logo.png` — that name doesn't exist in this repo). A *different* logo also exists at `web/public/logo.png`, belonging to the public price website — do not use that one for the mobile app. No task in this list should generate, replace, or touch either file.
