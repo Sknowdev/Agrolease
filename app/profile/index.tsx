@@ -43,18 +43,23 @@ type Profile = {
  */
 export default function ProfileView() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadError, setLoadError] = useState<string | undefined>();
   const [isEditingId, setIsEditingId] = useState(false);
   const [editedId, setEditedId] = useState('');
   const [idError, setIdError] = useState<string | undefined>();
   const [isSavingId, setIsSavingId] = useState(false);
 
   const loadProfile = useCallback(() => {
-    apiGet<{ profile: Profile }>('/v1/profiles/me')
+    setLoadError(undefined);
+    return apiGet<{ profile: Profile }>('/v1/profiles/me')
       .then(({ profile: p }) => {
         setProfile(p);
         setEditedId(p.profile_id);
       })
-      .catch(() => setProfile(null));
+      .catch((err) => {
+        setProfile(null);
+        setLoadError(err instanceof Error ? err.message : 'Could not load your profile.');
+      });
   }, []);
 
   useFocusEffect(
@@ -106,7 +111,13 @@ export default function ProfileView() {
   }
 
   return (
-    <AppShell title="My Profile" showBackButton hideMenu>
+    <AppShell title="My Profile" showBackButton hideMenu onRefresh={loadProfile}>
+      {loadError ? (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
+          <Text style={styles.errorBannerText}>{loadError} - pull to refresh or tap the refresh icon above.</Text>
+        </View>
+      ) : null}
       <View style={styles.avatarSection}>
         <Pressable onPress={handleAvatarPress} style={styles.avatarCircle}>
           {profile?.avatar_url ? (
@@ -175,6 +186,20 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: '#FDECEC',
+    borderRadius: 8,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.danger,
+  },
   avatarSection: {
     alignItems: 'center',
     marginBottom: Spacing.sm,

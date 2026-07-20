@@ -59,16 +59,27 @@ export default function Login() {
       // its own immediate-session path. POST /v1/profiles is already
       // idempotent (returns the existing row if one exists - see
       // backend/src/routes/profiles.js) so calling it here on every
-      // login is always safe, not just on a first-ever login. Falls
-      // back to the email's local-part as a placeholder Display Name
-      // when creating for the first time - same placeholder pattern
-      // already used to backfill the two real accounts that hit this
-      // exact gap earlier in this session.
+      // login is always safe, not just on a first-ever login.
+      //
+      // Uses the REAL typed Display Name/Phone from user_metadata
+      // (stashed at signUp() time - see app/signup.tsx) rather than a
+      // placeholder - fixes a real bug where every profile created via
+      // this path got the email's local-part as its name instead of
+      // whatever the user actually typed at Sign Up, because that
+      // value was previously discarded the moment email confirmation
+      // was required. Only falls back to the email-derived placeholder
+      // if user_metadata genuinely has nothing (e.g. an edge case that
+      // reaches Login without ever going through this app's Sign Up).
       try {
         const { data: userData } = await supabase.auth.getUser();
-        const email = userData.user?.email;
-        const fallbackName = email ? email.split('@')[0] : 'New User';
-        await apiPost('/v1/profiles', { displayName: fallbackName });
+        const user = userData.user;
+        const pendingName = user?.user_metadata?.pending_display_name as string | undefined;
+        const pendingPhone = user?.user_metadata?.pending_phone as string | null | undefined;
+        const fallbackName = user?.email ? user.email.split('@')[0] : 'New User';
+        await apiPost('/v1/profiles', {
+          displayName: pendingName?.trim() || fallbackName,
+          phone: pendingPhone || undefined,
+        });
       } catch {
         // Non-fatal - Home/Profile already handle a missing profile
         // gracefully, and this never blocks a successful login.

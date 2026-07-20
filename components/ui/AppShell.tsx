@@ -1,7 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { Colors, Radius, Spacing } from '../../constants/colors';
 import { apiDelete } from '../../lib/apiClient';
@@ -52,6 +63,20 @@ export function AppShell({
    * other screen keeps the real, working hamburger menu.
    */
   hideMenu = false,
+  /**
+   * Called when the user pulls to refresh. Wires react-native's
+   * RefreshControl into the scroll view - works correctly on a real
+   * iOS/Android device via Expo Go, but React Native Web has no
+   * native pull gesture to hook into, so it's a visual no-op there.
+   * Since this whole project is currently being tested via
+   * `expo start --web` (see task_app_progress.md), a visible manual
+   * "Refresh" button is ALSO rendered next to the header whenever this
+   * prop is provided, so there's always a real, working way to reload
+   * a screen's data regardless of which platform it's tested on -
+   * this isn't decorative, it's the only refresh path that actually
+   * works in the environment this app has been tested in so far.
+   */
+  onRefresh,
 }: {
   title: string;
   subtitle?: string;
@@ -63,8 +88,20 @@ export function AppShell({
   bottomInset?: number;
   showBackButton?: boolean;
   hideMenu?: boolean;
+  onRefresh?: () => Promise<void> | void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    if (!onRefresh || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
 
   function openMenu() {
     onMenuPress?.();
@@ -132,6 +169,21 @@ export function AppShell({
             <Text style={styles.headerTitle}>{title}</Text>
             {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
           </View>
+          {onRefresh ? (
+            <Pressable
+              onPress={handleRefresh}
+              style={styles.refreshButton}
+              hitSlop={8}
+              accessibilityLabel="Refresh"
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="refresh" size={20} color="#fff" />
+              )}
+            </Pressable>
+          ) : null}
           {hideMenu ? (
             <View style={styles.menuButton} />
           ) : (
@@ -150,6 +202,11 @@ export function AppShell({
         <ScrollView
           style={styles.body}
           contentContainerStyle={[styles.bodyContent, { paddingBottom: Spacing.lg + bottomInset }]}
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+            ) : undefined
+          }
         >
           {children}
         </ScrollView>
@@ -259,6 +316,15 @@ const styles = StyleSheet.create({
     top: 4,
     width: 32,
     height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshButton: {
+    position: 'absolute',
+    right: Spacing.lg + 40,
+    top: 6,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },

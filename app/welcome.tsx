@@ -7,6 +7,7 @@ import { Card } from '../components/ui/Card';
 import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
 import { ApiClientError, apiGet, apiPatch, apiPost } from '../lib/apiClient';
+import { supabase } from '../lib/supabaseClient';
 
 type Profile = {
   profile_id: string;
@@ -56,8 +57,18 @@ export default function Welcome() {
         setProfile(p);
         setEditedId(p.profile_id);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         if (err instanceof ApiClientError && err.code === 'profile_not_found') {
+          // Prefill from whatever was stashed at Sign Up (see
+          // app/signup.tsx's pending_display_name/pending_phone) -
+          // Google OAuth sign-ins never set these (no Sign Up screen
+          // was involved), so the fields stay blank for that path,
+          // which is correct - there's nothing to prefill.
+          const { data: userData } = await supabase.auth.getUser();
+          const pendingName = userData.user?.user_metadata?.pending_display_name as string | undefined;
+          const pendingPhone = userData.user?.user_metadata?.pending_phone as string | null | undefined;
+          if (pendingName) setSetupDisplayName(pendingName);
+          if (pendingPhone) setSetupPhone(pendingPhone);
           setNeedsSetup(true);
           return;
         }

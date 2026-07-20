@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -31,20 +32,35 @@ type Conduit = {
 export default function Conduits() {
   const [conduits, setConduits] = useState<Conduit[] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadError, setLoadError] = useState<string | undefined>();
+
+  const loadConduits = useCallback(() => {
+    setLoadError(undefined);
+    return apiGet<{ conduits: Conduit[] }>('/v1/conduits/mine')
+      .then(({ conduits: list }) => setConduits(list))
+      .catch((err) => {
+        setConduits([]);
+        setLoadError(err instanceof Error ? err.message : 'Could not load your conduits.');
+      });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      apiGet<{ conduits: Conduit[] }>('/v1/conduits/mine')
-        .then(({ conduits: list }) => setConduits(list))
-        .catch(() => setConduits([]));
-    }, [])
+      loadConduits();
+    }, [loadConduits])
   );
 
   const isEmpty = (conduits ?? []).length === 0;
 
   return (
     <View style={styles.flex}>
-      <AppShell title="My Conduits" bottomInset={80}>
+      <AppShell title="My Conduits" bottomInset={80} onRefresh={loadConduits}>
+        {loadError ? (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
+            <Text style={styles.errorBannerText}>{loadError} - pull to refresh or tap the refresh icon above.</Text>
+          </View>
+        ) : null}
         <TextField
           placeholder="Search conduits..."
           value={searchQuery}
@@ -84,6 +100,19 @@ export default function Conduits() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: '#FDECEC',
+    borderRadius: 8,
+    padding: Spacing.sm,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.danger,
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: Spacing.xl,

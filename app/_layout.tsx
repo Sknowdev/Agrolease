@@ -60,6 +60,7 @@ export default function RootLayout() {
         <Stack.Screen name="welcome" />
         <Stack.Screen name="home" />
         <Stack.Screen name="conduits" />
+        <Stack.Screen name="recent-activity" />
         <Stack.Screen name="profile/index" />
         <Stack.Screen name="profile/edit" />
         <Stack.Screen name="security/access" />

@@ -51,6 +51,28 @@ export default function SignUp() {
         email: email.trim(),
         password,
         phone: isPhoneExpanded && phone.trim() ? phone.trim() : undefined,
+        options: {
+          // Real bug fixed here: when email confirmation is required
+          // (this project's actual Supabase setup - free tier, no
+          // custom SMTP), Continue used to just discard displayName/
+          // phone and route to "check your email" - Login's later
+          // self-healing POST /v1/profiles call then created the
+          // profile with a placeholder name (the email's local-part),
+          // never what the user actually typed here. Supabase's own
+          // user_metadata survives independently of any session/device -
+          // it's attached to auth.users at signUp() time regardless of
+          // whether a session comes back immediately, and is readable
+          // via getUser() from ANY later session (a different browser
+          // tab, a different device, days later) once confirmed. This
+          // is the fix: stash the real typed name/phone here, and read
+          // it back at the point a profile actually gets created
+          // (Login's handleSignIn, and Welcome's own setup form) so the
+          // real value is used instead of a fallback.
+          data: {
+            pending_display_name: displayName.trim(),
+            pending_phone: isPhoneExpanded && phone.trim() ? phone.trim() : null,
+          },
+        },
       });
 
       if (error) {

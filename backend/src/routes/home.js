@@ -73,4 +73,37 @@ export default async function homeRoute(app) {
       return sendApiError(reply, err);
     }
   });
+
+  /**
+   * GET /v1/notifications
+   * Backs Home's "Recent Activity" card - previously only a count
+   * (recentActivityCount above), with no way to see what the activity
+   * actually was. Returns the caller's own notifications, most recent
+   * first, capped at 50 (per the Constitution's "no endpoint returns
+   * unbounded lists" pagination convention - a full cursor-based
+   * implementation is deferred until a real task needs more than one
+   * page, this task's own checklist only requires the count to be
+   * real, not a full notification center).
+   */
+  app.get('/v1/notifications', { preHandler: requireAuth }, async (request, reply) => {
+    try {
+      const supabase = getSupabaseClient();
+      const profileId = request.authUser.id;
+
+      const { data: notifications, error } = await supabase
+        .from('notifications')
+        .select('id, type, title, body, read, created_at')
+        .eq('recipient_id', profileId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        return sendApiError(reply, error);
+      }
+
+      return reply.send({ notifications: notifications ?? [] });
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
 }

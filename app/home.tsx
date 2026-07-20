@@ -45,20 +45,40 @@ const ZERO_SUMMARY: HomeSummary = {
  */
 export default function Home() {
   const [summary, setSummary] = useState<HomeSummary | null>(null);
+  const [loadError, setLoadError] = useState<string | undefined>();
+
+  const loadSummary = useCallback(() => {
+    setLoadError(undefined);
+    return apiGet<HomeSummary>('/v1/home/summary')
+      .then(setSummary)
+      .catch((err) => {
+        setSummary(ZERO_SUMMARY);
+        setLoadError(err instanceof Error ? err.message : 'Could not load your data.');
+      });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      apiGet<HomeSummary>('/v1/home/summary')
-        .then(setSummary)
-        .catch(() => setSummary(ZERO_SUMMARY));
-    }, [])
+      loadSummary();
+    }, [loadSummary])
   );
 
   const s = summary ?? ZERO_SUMMARY;
 
   return (
     <View style={styles.flex}>
-      <AppShell title="Welcome" subtitle="What are you doing today?" bottomInset={80}>
+      <AppShell
+        title="Welcome"
+        subtitle="What are you doing today?"
+        bottomInset={80}
+        onRefresh={loadSummary}
+      >
+        {loadError ? (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
+            <Text style={styles.errorBannerText}>{loadError} - pull to refresh or tap the refresh icon above.</Text>
+          </View>
+        ) : null}
         <View style={styles.statGrid}>
           <StatCard
             label="My Conduits"
@@ -79,10 +99,11 @@ export default function Home() {
           <StatCard
             label="Recent Activity"
             value={s.recentActivityCount}
-            subtitle="No recent activity"
+            subtitle={s.recentActivityCount > 0 ? 'Tap to view' : 'No recent activity'}
             iconBg="#E3EEFB"
             iconColor="#3B78C4"
             icon={<Ionicons name="pulse-outline" size={18} color="#3B78C4" />}
+            onPress={() => router.push('/recent-activity')}
           />
           <StatCard
             label="Pending Invitations"
@@ -153,6 +174,7 @@ function StatCard({
   subtitle,
   iconBg,
   icon,
+  onPress,
 }: {
   label: string;
   value: number;
@@ -160,15 +182,26 @@ function StatCard({
   iconBg: string;
   iconColor: string;
   icon: React.ReactNode;
+  onPress?: () => void;
 }) {
-  return (
-    <Card style={styles.statCard}>
+  const card = (
+    <Card style={styles.statCardInner}>
       <View style={[styles.statIconCircle, { backgroundColor: iconBg }]}>{icon}</View>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statSubtitle}>{subtitle}</Text>
     </Card>
   );
+
+  if (onPress) {
+    return (
+      <Pressable style={styles.statCard} onPress={onPress}>
+        {card}
+      </Pressable>
+    );
+  }
+
+  return <View style={styles.statCard}>{card}</View>;
 }
 
 function ShortcutRow({
@@ -253,6 +286,19 @@ export function BottomTabBar({ active }: { active: 'home' | 'conduits' | 'create
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: '#FDECEC',
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.danger,
+  },
   statGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -261,6 +307,9 @@ const styles = StyleSheet.create({
   statCard: {
     flexBasis: '47%',
     flexGrow: 1,
+  },
+  statCardInner: {
+    width: '100%',
   },
   statIconCircle: {
     width: 36,
