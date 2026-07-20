@@ -27,7 +27,8 @@
       "expo-camera",
       "expo-location",
       "expo-notifications",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
