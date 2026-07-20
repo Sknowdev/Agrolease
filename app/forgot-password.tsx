@@ -14,41 +14,35 @@ import { supabase } from '../lib/supabaseClient';
  * "No worries! Enter your email or phone and we'll send you a reset
  * link." Field + Send Reset Link, or Reset via SMS - both lead to
  * Reset Verification Code (Step 14) since both are a code the user
- * enters next, not an out-of-band link they tap.
+ * enters next, not an out-of-band link they tap. Matches
+ * app_refrence.png IMG_1311: green card holds the form, "← Back to
+ * Login" sits outside/below it on white.
+ *
+ * "Reset via SMS" is disabled with a clear "Coming soon" message
+ * rather than silently attempting an OTP send - phone is optional at
+ * signup (many accounts have none on file) and no SMS provider is
+ * confirmed configured in Supabase yet (see task_app_progress.md's
+ * Task 2 status). Wiring this up fully needs both of those resolved
+ * first, not a client-side fix.
  */
 export default function ForgotPassword() {
   const [identifier, setIdentifier] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function isEmail(value: string) {
-    return value.includes('@');
-  }
-
-  async function handleSendReset(method: 'link' | 'sms') {
+  async function handleSendReset() {
     if (!identifier.trim()) {
-      setError('Enter your email or phone.');
+      setError('Enter your email.');
       return;
     }
     setError(undefined);
     setIsSubmitting(true);
     try {
       const trimmed = identifier.trim();
-      if (method === 'link' || isEmail(trimmed)) {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed);
-        if (resetError) {
-          Alert.alert('Could not send reset link', resetError.message);
-          return;
-        }
-      } else {
-        // Phone-based reset: Supabase sends an OTP via the phone
-        // provider, entered on the next screen the same way sign-up
-        // verification works.
-        const { error: otpError } = await supabase.auth.signInWithOtp({ phone: trimmed });
-        if (otpError) {
-          Alert.alert('Could not send reset code', otpError.message);
-          return;
-        }
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed);
+      if (resetError) {
+        Alert.alert('Could not send reset link', resetError.message);
+        return;
       }
       router.push({ pathname: '/reset-verification', params: { identifier: trimmed } });
     } finally {
@@ -56,43 +50,47 @@ export default function ForgotPassword() {
     }
   }
 
+  function handleSmsPress() {
+    Alert.alert(
+      'Coming soon',
+      'Password reset via SMS isn\u2019t available yet - use email for now.'
+    );
+  }
+
   return (
-    <AuthShell>
-      <Text style={styles.heading}>Forgot Password</Text>
+    <AuthShell backLink={{ label: 'Back to Login', onPress: () => router.push('/login') }}>
+      <Text style={styles.heading}>Forgot Password?</Text>
       <Text style={styles.subheading}>
-        No worries! Enter your email or phone and we&apos;ll send you a reset link.
+        No worries! Enter your email and we&apos;ll send you a reset link.
       </Text>
 
       <TextField
-        label="Email or Phone"
-        placeholder="you@example.com"
+        onDark
+        placeholder="Email"
         autoCapitalize="none"
         value={identifier}
         onChangeText={setIdentifier}
         error={error}
       />
 
-      <Button label="Send Reset Link" onPress={() => handleSendReset('link')} loading={isSubmitting} />
-      <Button
-        label="Reset via SMS"
-        onPress={() => handleSendReset('sms')}
-        variant="outline"
-        loading={isSubmitting}
-      />
+      <Button label="Send Reset Link" onPress={handleSendReset} loading={isSubmitting} />
+      <Button label="Reset via SMS (Coming soon)" onPress={handleSmsPress} variant="outlineOnDark" />
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.xs,
   },
   subheading: {
     fontSize: 14,
-    color: Colors.muted,
+    color: Colors.mutedOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.lg,
   },
 });

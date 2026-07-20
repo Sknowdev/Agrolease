@@ -51,18 +51,23 @@ export async function generateUniqueProfileId() {
 }
 
 /**
- * Validates a user-supplied Profile ID for the Welcome screen's inline
- * [edit] action: same `user` + 4 digit format, checked case-insensitively
- * for uniqueness against every other profile (not just an exact match).
+ * Validates a user-supplied Profile ID for the Profile screen's inline
+ * edit: a free-form unique username, not the `user####` auto-generated
+ * format alone - per explicit instruction, a user should be able to
+ * pick any handle they want (e.g. "johndoe", "farmking"), not be forced
+ * to include a number. Still constrained to a safe, URL/display-safe
+ * charset and a sane length, checked case-insensitively for uniqueness
+ * against every other profile (not just an exact match) - same
+ * mechanism as before, just a looser format.
  */
-const PROFILE_ID_FORMAT = /^[a-zA-Z]+[0-9]{4}$/;
+const PROFILE_ID_FORMAT = /^[a-zA-Z0-9_]{3,20}$/;
 
 export async function validateAndReserveProfileId(profileId, currentProfileDbId) {
   if (!PROFILE_ID_FORMAT.test(profileId)) {
     throw new ApiError(
       422,
       'invalid_profile_id_format',
-      'Profile ID must be letters followed by 4 digits, e.g. user4821.',
+      'Profile ID must be 3-20 characters: letters, numbers, and underscores only.',
       'profileId'
     );
   }
@@ -85,32 +90,40 @@ export async function validateAndReserveProfileId(profileId, currentProfileDbId)
 }
 
 /**
- * Resolves the active country_config row to stamp onto a new profile's
- * country_code - per the Constitution ("Geography is configuration, not
- * code") and Task 2's explicit checklist item ("country_code on new
- * profiles is pulled from country_config, never hardcoded").
+ * Resolves the active mobile-app country_config row to stamp onto a
+ * new profile's country_code - per the Constitution ("Geography is
+ * configuration, not code") and Task 2's explicit checklist item
+ * ("country_code on new profiles is pulled from country_config, never
+ * hardcoded").
  *
- * Task 2's brief doesn't specify how the active country is determined
- * for a brand-new signup (no device-locale/IP-geo requirement is stated
- * anywhere in this task's checklist) - taking the single row where
- * active = true as the current, deliberately narrow interpretation,
- * since Nigeria is still explicitly the only launch market (see ABS
- * Section 1 / Product Plan V10). This will need revisiting the moment a
- * second country's mobile-app rollout begins - flagging here rather than
- * silently guessing further logic (e.g. IP-based geo-detection) that no
- * brief has asked for yet.
+ * IMPORTANT: country_config.active is the PUBLIC PRICE WEBSITE's own
+ * flag (Track B - which countries have a live price page), not a
+ * mobile-app-specific flag - confirmed directly against the live
+ * database, where 17 of 19 rows have active = true (every country the
+ * price website shows a page for), not just Nigeria. Querying on
+ * `active` alone picked up whichever active row happened to sort
+ * first (Ghana, in practice) rather than Nigeria - a real bug, not a
+ * hypothetical one. The mobile app has no country-activation flag of
+ * its own in this schema (Task 1's migration deliberately didn't add
+ * one - see 0004_mobile_app_schema.sql's own comments). `payment_provider`
+ * is the only column Task 1 actually populated for exactly one country
+ * (Nigeria, `paystack`) and is therefore the real, current signal for
+ * "this country is live for the mobile app" - not a guessed proxy.
+ * This will need a dedicated column (e.g. `mobile_app_active`) the
+ * moment a second mobile-app market launches; flagging here rather
+ * than silently re-guessing further logic no brief has asked for yet.
  */
 export async function resolveActiveCountryCode() {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('country_config')
     .select('country_code')
-    .eq('active', true)
+    .not('payment_provider', 'is', null)
     .limit(1)
     .maybeSingle();
 
   if (error) {
-    throw new ApiError(500, 'country_config_lookup_failed', 'Could not resolve active country.');
+    throw new ApiError(500, 'country_config_lookup_failed', 'Could not resolve active country.', undefined, error);
   }
   if (!data) {
     throw new ApiError(500, 'no_active_country', 'No active country is configured yet.');

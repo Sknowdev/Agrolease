@@ -15,7 +15,6 @@ import { AuthProvider } from '../hooks/useAuth';
  * lands here directly, code pre-filled") and Google/email-recovery
  * OAuth redirects landing back on agrolease:// (see login.tsx/
  * signup.tsx's redirectTo and forgot-password's email recovery flow).
- *
  * Screen-level auth guarding (e.g. blocking /home without a session) is
  * intentionally NOT done here via a redirect-on-every-navigation guard -
  * Splash (app/index.tsx) is the single source of truth for "where does
@@ -72,6 +71,7 @@ export default function RootLayout() {
         <Stack.Screen name="coming-soon/create" />
         <Stack.Screen name="coming-soon/messages" />
         <Stack.Screen name="coming-soon/browse-listings" />
+        <Stack.Screen name="coming-soon/link-security" />
       </Stack>
     </AuthProvider>
   );

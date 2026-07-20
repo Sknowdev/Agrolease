@@ -1,4 +1,5 @@
-import { Link, router } from 'expo-router';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 
@@ -6,6 +7,7 @@ import { AuthShell } from '../components/ui/AuthShell';
 import { Button, ButtonRow } from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
+import { getOAuthRedirectUrl } from '../constants/config';
 import { apiPost } from '../lib/apiClient';
 import { supabase } from '../lib/supabaseClient';
 
@@ -15,8 +17,10 @@ type FormErrors = Partial<
 
 /**
  * Sign Up Screen (Task 2, Step 4) - collapsed/expanded, same screen,
- * no new page. "+ Add Phone Number" slides open a Phone field inline
- * via local state - no navigation ever happens for that expansion.
+ * no new page. "+ Add Phone Number" sits OUTSIDE the green card (see
+ * app_refrence.png IMG_1309/1310) and slides the Phone field open
+ * inside the card via local state - no navigation ever happens for
+ * that expansion.
  *
  * On Continue: creates auth.users (email+password), then calls the
  * backend to write the initial `profiles` row and generate the Profile
@@ -53,27 +57,30 @@ export default function SignUp() {
         Alert.alert('Sign up failed', error.message);
         return;
       }
-      if (!data.session) {
-        // Supabase issued the account but there's no session yet
-        // (e.g. email confirmation required before a session exists).
-        // Sign in explicitly so the backend call below has a valid
-        // Bearer token, matching Task 2's flow of profile-creation
-        // happening immediately after account creation either way.
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
+
+      if (data.session) {
+        // A session came back immediately (email confirmation is off
+        // for this project) - safe to call the backend now.
+        await apiPost('/v1/profiles', {
+          displayName: displayName.trim(),
+          phone: isPhoneExpanded && phone.trim() ? phone.trim() : undefined,
         });
-        if (signInError) {
-          Alert.alert('Sign up failed', signInError.message);
-          return;
-        }
+        router.replace('/verification');
+        return;
       }
 
-      await apiPost('/v1/profiles', {
-        displayName: displayName.trim(),
-        phone: isPhoneExpanded && phone.trim() ? phone.trim() : undefined,
-      });
-
+      // No session yet - Supabase requires email/phone confirmation
+      // before a session exists. Do NOT attempt signInWithPassword
+      // here: it will reliably fail with 400 (email not confirmed)
+      // and risks tripping Supabase's signup rate limit (429) on
+      // repeated attempts. Route to the "check your email" screen
+      // (app/verification.tsx) - this project's Supabase tier sends a
+      // confirmation LINK, not a typed code (free tier, no custom SMTP,
+      // template can't be changed to {{ .Token }}). The profile row is
+      // created after the user actually confirms and signs in for the
+      // first time instead - see the post-confirmation routing in
+      // app/_layout.tsx, which calls POST /v1/profiles once a real
+      // session exists if one hasn't been created yet.
       router.replace('/verification');
     } catch (err) {
       Alert.alert('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
@@ -87,7 +94,7 @@ export default function SignUp() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'agrolease://' },
+        options: { redirectTo: getOAuthRedirectUrl() },
       });
       if (error) {
         Alert.alert('Google sign-in failed', error.message);
@@ -102,19 +109,34 @@ export default function SignUp() {
   }
 
   return (
-    <AuthShell>
-      <Text style={styles.heading}>Create your account</Text>
+    <AuthShell
+      belowCard={
+        !isPhoneExpanded ? (
+          <Pressable onPress={() => setIsPhoneExpanded(true)} style={styles.addPhoneRow}>
+            <Text style={styles.addPhoneText}>+ Add phone number</Text>
+          </Pressable>
+        ) : null
+      }
+      footer={
+        <Pressable style={styles.footerRow} onPress={() => router.push('/login')}>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <Text style={styles.footerChevron}>{'>'}</Text>
+        </Pressable>
+      }
+    >
+      <Text style={styles.heading}>Create Account</Text>
+      <Text style={styles.subheading}>Let&apos;s get you started</Text>
 
       <TextField
-        label="Display Name"
-        placeholder="Your name or business name"
+        onDark
+        placeholder="Display Name"
         value={displayName}
         onChangeText={setDisplayName}
         error={errors.displayName}
       />
       <TextField
-        label="Email"
-        placeholder="you@example.com"
+        onDark
+        placeholder="Email"
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -122,16 +144,16 @@ export default function SignUp() {
         error={errors.email}
       />
       <TextField
-        label="Password"
-        placeholder="••••••••"
+        onDark
+        placeholder="Password"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
         error={errors.password}
       />
       <TextField
-        label="Confirm Password"
-        placeholder="••••••••"
+        onDark
+        placeholder="Confirm Password"
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
@@ -140,64 +162,71 @@ export default function SignUp() {
 
       {isPhoneExpanded ? (
         <TextField
-          label="Phone Number (optional)"
-          placeholder="+234..."
+          onDark
+          placeholder="Phone Number"
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
           error={errors.phone}
         />
-      ) : (
-        <Pressable onPress={() => setIsPhoneExpanded(true)} style={styles.addPhoneRow}>
-          <Text style={styles.addPhoneText}>+ Add Phone Number</Text>
-        </Pressable>
-      )}
+      ) : null}
 
-      <Button label="Continue" onPress={handleContinue} loading={isSubmitting} />
+      <Button label="Create Account" onPress={handleContinue} loading={isSubmitting} />
 
       <ButtonRow>
-        <Button label="Continue with Google" onPress={handleGoogleSignUp} variant="outline" />
         <Button
-          label="Security Access"
+          label="Google"
+          onPress={handleGoogleSignUp}
+          variant="outlineOnDark"
+          icon={<FontAwesome name="google" size={16} color="#fff" />}
+        />
+        <Button
+          label="Security"
           onPress={() => router.push('/security/access')}
-          variant="outline"
+          variant="outlineOnDark"
+          icon={<Ionicons name="shield-checkmark-outline" size={16} color="#fff" />}
         />
       </ButtonRow>
-
-      <Text style={styles.footerText}>
-        Already have an account?{' '}
-        <Link href="/login" style={styles.linkInline}>
-          Log In
-        </Link>
-      </Text>
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnDark,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  subheading: {
+    fontSize: 14,
+    color: Colors.mutedOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.lg,
   },
   addPhoneRow: {
-    marginBottom: Spacing.md,
-    paddingVertical: Spacing.sm,
+    marginTop: Spacing.lg,
+    alignItems: 'center',
   },
   addPhoneText: {
     color: Colors.accentDark,
     fontWeight: '600',
     fontSize: 15,
   },
-  footerText: {
-    fontSize: 14,
-    color: Colors.muted,
-    marginTop: Spacing.md,
-    textAlign: 'center',
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
   },
-  linkInline: {
-    color: Colors.accentDark,
-    fontWeight: '600',
+  footerText: {
+    fontSize: 15,
+    color: Colors.text,
+  },
+  footerChevron: {
+    fontSize: 16,
+    color: Colors.muted,
   },
 });

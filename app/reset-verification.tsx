@@ -67,13 +67,13 @@ export default function ResetVerification() {
   }
 
   return (
-    <AuthShell>
+    <AuthShell backLink={{ label: 'Back to Login', onPress: () => router.replace('/login') }}>
       <Text style={styles.heading}>Enter Reset Code</Text>
       <Text style={styles.subheading}>Enter the code we sent to {identifier}.</Text>
 
       <TextField
-        label="Verification Code"
-        placeholder="000000"
+        onDark
+        placeholder="Verification Code"
         keyboardType="number-pad"
         value={code}
         onChangeText={setCode}
@@ -87,14 +87,16 @@ export default function ResetVerification() {
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.xs,
   },
   subheading: {
     fontSize: 14,
-    color: Colors.muted,
+    color: Colors.mutedOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.lg,
   },
 });

@@ -83,3 +83,15 @@ export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   });
   return parseResponse<T>(res);
 }
+
+export async function apiDelete<T = void>(path: string): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(`${Config.apiBaseUrl}${path}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  return parseResponse<T>(res);
+}

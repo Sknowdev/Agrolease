@@ -48,16 +48,16 @@ export default function NewPassword() {
       <Text style={styles.heading}>Set a New Password</Text>
 
       <TextField
-        label="New Password"
-        placeholder="••••••••"
+        onDark
+        placeholder="New Password"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
         error={errors.password}
       />
       <TextField
-        label="Confirm Password"
-        placeholder="••••••••"
+        onDark
+        placeholder="Confirm Password"
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
@@ -71,9 +71,10 @@ export default function NewPassword() {
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.lg,
   },
 });

@@ -1,9 +1,9 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BottomTabBar } from './home';
-import { Button, ButtonRow } from '../components/ui/Button';
+import { Button } from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
 import { AppShell } from '../components/ui/AppShell';
 import { Colors, Spacing } from '../constants/colors';
@@ -32,17 +32,19 @@ export default function Conduits() {
   const [conduits, setConduits] = useState<Conduit[] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    apiGet<{ conduits: Conduit[] }>('/v1/conduits/mine')
-      .then(({ conduits: list }) => setConduits(list))
-      .catch(() => setConduits([]));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      apiGet<{ conduits: Conduit[] }>('/v1/conduits/mine')
+        .then(({ conduits: list }) => setConduits(list))
+        .catch(() => setConduits([]));
+    }, [])
+  );
 
   const isEmpty = (conduits ?? []).length === 0;
 
   return (
     <View style={styles.flex}>
-      <AppShell title="My Conduits">
+      <AppShell title="My Conduits" bottomInset={80}>
         <TextField
           placeholder="Search conduits..."
           value={searchQuery}
@@ -52,7 +54,7 @@ export default function Conduits() {
         {isEmpty ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>You don&apos;t have any conduits yet</Text>
-            <ButtonRow>
+            <View style={styles.emptyActions}>
               <Button
                 label="Generate"
                 onPress={() => router.push('/coming-soon/create')}
@@ -62,7 +64,7 @@ export default function Conduits() {
                 onPress={() => router.push('/coming-soon/create')}
                 variant="outline"
               />
-            </ButtonRow>
+            </View>
           </View>
         ) : (
           <View style={styles.list}>
@@ -86,6 +88,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.xl,
     gap: Spacing.md,
+  },
+  emptyActions: {
+    width: '100%',
+    gap: Spacing.sm,
   },
   emptyTitle: {
     fontSize: 16,

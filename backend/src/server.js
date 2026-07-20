@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import cors from '@fastify/cors';
 import dotenv from 'dotenv';
 import Fastify from 'fastify';
 
@@ -33,6 +34,19 @@ const HOST = process.env.BACKEND_HOST ?? '0.0.0.0';
  */
 function buildServer() {
   const app = Fastify({ logger: true });
+  // CORS is only relevant when testing via `expo start --web` (a real
+  // browser origin, e.g. :8081, calling this API on a different origin,
+  // e.g. :4055/4000) - native iOS/Android builds never send an Origin
+  // header and are unaffected either way. Wide-open in development
+  // (no NODE_ENV=production set anywhere in this task) since there is
+  // no browser-based production deployment of this API planned; revisit
+  // with an explicit allowlist if/when this backend is ever fronted by
+  // a real web client in production.
+  app.register(cors, {
+    origin: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
   app.register(healthRoute);
   // Task 2 routes - all under /v1/ per the Constitution's API
   // versioning rule ("A URL without a version prefix will never exist

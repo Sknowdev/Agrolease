@@ -28,8 +28,8 @@
 
 | # | Task | Status | Last Updated | Notes / What Was Verified |
 |---|---|---|---|---|
-| 1 | Project Scaffolding + Full Database Schema | ⚠️ Blocked (merged to `main`; DB migration still not run) | 2026-07-17 | **PR #19 merged into `main` on 2026-07-17 22:26 UTC.** App/backend/migration code is no longer on a separate branch — it's part of `main` now, confirmed present in a fresh clone (`/app`, `/backend`, `supabase/migrations/0004_mobile_app_schema.sql` + rollback all verified on disk). App confirmed booting for real (SDK 54, web preview screenshot from founder's own Codespace — real logo/title/subtitle render). Physical-device test via Expo Go isolated to a pure networking/URL issue (port visibility + wrong internal IP), not an app bug. **Remaining real blocker, still unresolved as of this update:** `0004_mobile_app_schema.sql` has not been confirmed run against the live Supabase project — no agent so far has had real Supabase credentials in its sandbox, and merging the PR does not itself run the SQL. Task 2 work is proceeding on a new branch regardless, per explicit instruction, but any live-database verification for Task 2 remains blocked on this same open question. |
-| 2 | Auth + Profile ID | ⚠️ Blocked (code complete; unverified against a live Supabase/Auth project) | 2026-07-17 | Brief: `Task-02-Auth-ProfileID.md` (v5). All 15 screens built, backend routes built, migration written. See detailed status below — genuinely blocked on the same real-credentials gap as Task 1, not on anything code-side. |
+| 1 | Project Scaffolding + Full Database Schema | ⚠️ Blocked (migration NOW RUN; icon squareness still open) | 2026-07-20 | **Migrations `0004_mobile_app_schema.sql` and `0005_task2_auth_profile.sql` were run for real against the live Supabase project on 2026-07-20**, using real credentials supplied in this session's `.env` (see Task 2's detailed status below for the full verification). `profiles`, `conduits`, `security_officers`, `link_codes`, `notifications`, `sponsors`, `entitlements`, and every other Task 1 table now genuinely exist. `country_config`'s 19 rows confirmed untouched, Nigeria's row confirmed correctly updated (`overwrite_fee_floor_local=100000`, `payment_provider=paystack`). The one remaining Task 1 item still open: the non-square logo / `expo-doctor` warning, unchanged, still deliberately not auto-fixed. |
+| 2 | Auth + Profile ID | 🟡 In Progress (major real-database and real-UX work done today; NOT ready to mark ✅ yet) | 2026-07-20 | Brief: `Task-02-Auth-ProfileID.md` (v5). See "Task 2 — Session Update 2026-07-20" below for the full, detailed account of everything fixed, tested, and still open. Do not mark this ✅ Complete until Google OAuth and the Supabase Site URL are resolved (both dashboard-only, not code) and the remaining checklist items below are actually re-tested. |
 | 3 | Conduit Creation + Invitation | ⬜ Not Started | — | — |
 | 4 | Paystack Payment + Entitlement Engine Core | ⬜ Not Started | — | — |
 | 5 | Security Officer System | ⬜ Not Started | — | — |
@@ -165,3 +165,94 @@ Repo hygiene done as part of starting Task 2: deleted the stale `task_app_progre
 - No iOS simulator / Android emulator / physical device test was performed in this sandbox (same substitution as Task 1: a real `expo export --platform web` bundle check stands in, a lower-confidence proxy for the actual checklist item).
 
 **To unblock:** same as Task 1 — supply real Supabase credentials (`.env` at repo root), enable the three Auth providers + an SMS provider per `requirements.md` §6, then run `0004_mobile_app_schema.sql` followed by `0005_task2_auth_profile.sql` in the Supabase SQL editor. Once those tables exist and Auth is configured, this task's own checklist can actually be run end-to-end for the first time.
+
+
+
+## Task 2 — Session Update 2026-07-20 (long session — read this in full before continuing tomorrow)
+
+**Start of session state:** all 15 screens + backend routes + migrations existed as code only (from 2026-07-17), but had never been run against the live Supabase project, and the visual design did not match the founder's real reference mockups (`app_refrence.png` folder — 11 images by end of session, several added mid-session via `git pull` from `main`). This session's work fell into two categories: (1) real infrastructure work (running migrations, fixing real backend bugs), and (2) visual/UX rework to match the reference images and explicit founder feedback.
+
+### 1. Migrations run for real against live Supabase — MAJOR MILESTONE
+
+The founder ran `supabase/migrations/0004_mobile_app_schema.sql` then `0005_task2_auth_profile.sql` directly in the Supabase SQL Editor (pasted from this repo, per the agent's instructions). **Verified afterward via the service-role client, not assumed:**
+- `profiles`, `conduits`, `security_officers`, `link_codes`, `notifications`, `sponsors`, `entitlements`, and every other new table from both migrations now exist.
+- `country_config` still has all 19 rows.
+- Nigeria's row correctly shows `overwrite_fee_floor_local=100000`, `payment_provider=paystack`.
+
+**This resolves the single standing blocker carried forward since Task 1 was first built** — no more "migration hasn't run" caveat applies. Real Supabase credentials now exist in this session's `.env` and were used directly (service-role client) for verification, debugging, and one manual data backfill (see below).
+
+### 2. Real bug found and fixed: wrong "active country" resolution
+
+`backend/src/services/profileService.js`'s `resolveActiveCountryCode()` queried `country_config.active = true` — but that flag belongs to the **public price website** (17 of 19 countries have it `true`), not a mobile-app-specific flag. This picked Ghana, not Nigeria, for every new signup. **Fixed:** now queries `payment_provider IS NOT NULL` instead — Nigeria is the only row Task 1's migration actually populated for that column, making it the real signal. Two existing real accounts that got backfilled with the wrong country (`GH`) were corrected to `NG` by hand (see below).
+
+### 3. Real bug found and fixed: Login never created a `profiles` row
+
+`app/login.tsx`'s `handleSignIn` only ever called `signInWithPassword` and routed to `/home` — it never called `POST /v1/profiles`. Only `signup.tsx`'s *immediate-session* path (`data.session` truthy right after `signUp()`) ever created a profile. Any user who confirmed via the email link and then logged in normally (the *only* real path available — see item 4) hit this gap and had **no profile row at all**, causing "Display Name doesn't show," a 500 on Edit Profile, etc.
+
+**Fixed:** `Login`'s `handleSignIn` now also calls the same idempotent `POST /v1/profiles` (safe to call every login — backend already returns the existing row if one exists) with a fallback Display Name derived from the email's local-part. This is a genuine self-healing fix, not just the one-time manual backfill below.
+
+**Manual backfill performed this session** (for the two real accounts that existed before this fix): `akintoyev612@gmail.com` → `profile_id: user0989`, `shiwonikuoluwabunmi@gmail.com` → `profile_id: user7897` (founder has since changed this one to `sknow` via the new free-form Profile ID edit — confirmed in the live DB). Both corrected to `country_code: NG`.
+
+### 4. Real bug found and fixed: Verification screen assumed a typed code; Supabase only ever sends a link
+
+Confirmed directly with the founder: **this Supabase project is on the free tier with no custom SMTP**, so the "Confirm signup" email template cannot be changed from the default `{{ .ConfirmationURL }}` (link) to `{{ .Token }}` (numeric code) — this is a Supabase account-tier limitation, not a code bug, and is **not fixable without a paid plan or a custom SMTP provider**.
+
+Verified via the Admin API (`generateLink`, `verifyOtp`, and simulating a real click on `action_link` via `fetch()`, using throwaway test accounts that were deleted immediately after) that: the underlying OTP token *does* work server-side if you had it, but the email itself will never show it to a real user on this tier — only the link. Clicking the link **does** confirm the account server-side (`email_confirmed_at` gets set) even though it redirects to a dead `http://localhost:3000` (Supabase's default fallback Site URL — see Open Items below).
+
+**Fixed:** `app/verification.tsx` completely rewritten — no more code-entry field. Now shows "Check your email," a working **Resend** button (`supabase.auth.resend`), and an **"I've verified — Continue"** button that checks real confirmation status via `getUser()` before proceeding to Welcome.
+
+### 5. CORS fixed (real bug, was blocking every backend call from the web-tested build)
+
+`@fastify/cors` was not installed/registered at all — every `fetch()` from the Expo web build (a real browser origin) to the backend was blocked by the browser's CORS preflight check. Installed `@fastify/cors@10.1.0`, registered with `origin: true` (dev-only rationale documented in `backend/src/server.js` — native iOS/Android builds never send an Origin header and are unaffected either way). Confirmed via a real `OPTIONS` preflight request returning the correct `access-control-allow-origin` header.
+
+### 6. Backend error logging fixed (was silently swallowing the real cause of every 500)
+
+`backend/src/lib/errors.js`'s `sendApiError` never logged anything for a thrown `ApiError` (only for a truly unexpected exception) — meaning every "Could not load your profile" 500 gave zero diagnostic information. This is *how* the wrong-country and missing-profile-row bugs above were actually found and confirmed, not guessed. Fixed: any `ApiError` with `statusCode >= 500` now logs its real cause; 4xx errors (expected/handled cases) stay unlogged as before. `ApiError` itself now accepts and stores a `cause` (the original Supabase error object), threaded through from every call site in `backend/src/routes/profiles.js`.
+
+### 7. Profile ID format relaxed to a free-form username (explicit founder request)
+
+Was `letters + exactly 4 digits` (`user4821`) for *editing* (auto-generation still uses that pattern as a starting value, per the brief — only the edit path changed). Founder explicitly asked for a normal unique-username feel with no forced digit. Now: 3-20 characters, letters/numbers/underscores, case-insensitive uniqueness (unchanged mechanism, just a looser regex) — `backend/src/services/profileService.js`'s `PROFILE_ID_FORMAT`.
+
+### 8. Visual/UX rework to match real reference images (`app_refrence.png/*`)
+
+The founder pushed 11 real mockup images to `main` over the course of this session (pulled in via `git checkout origin/main -- app_refrence.png/` at three different points, since Git LFS/file-tracking meant new images weren't visible until fetched). Read and matched against directly, not guessed:
+- **Auth screens** (`AuthShell.tsx`, `login.tsx`, `signup.tsx`, `forgot-password.tsx`, `security/access.tsx`, `verification.tsx`, `reset-verification.tsx`, `new-password.tsx`, `security/details.tsx`): white outer page + deep green rounded card (was inverted at first), real Google "G" icon + shield icon via newly-added `@expo/vector-icons` (was emoji/fake styled text), "Forgot Password?" moved outside the card onto white (per explicit override of what the reference image itself showed), logo enlarged ~10%, "AgroLease" wordmark removed from under the logo, button-row spacing increased, text no longer bleeds on narrow screens (`flexShrink`/`adjustsFontSizeToFit` added to `Button.tsx`).
+- **Home / `AppShell.tsx`**: full rebuild to match `EA7D67AE-...png`/`IMG_1365.jpeg` — greeting text block now genuinely centered in the header (avatar and hamburger are absolutely positioned at the edges, not flex-adjacent, which previously made the greeting drift left), real colored-icon stat cards, "Generate Conduit ID" as its own dark card (not a plain button), header-to-body seam fixed (was rendering as a broken "white cap with a black line" artifact — root cause: a separate rounded-rectangle filler block sitting between two hard edges; fixed by giving the body itself rounded top corners with a small negative `marginTop` overlap instead), bottom tab bar rebuilt as a genuinely floating pill (`position: absolute` + transparent margin wrapper, `boxShadow` instead of the deprecated `shadow*` props), icon-only (labels removed per explicit request).
+- **Live Commodity Prices**: changed from a hardcoded Nigeria/Maize/₦420,000 display to a real "Coming soon" state — per the Engineering Constitution, the mobile app must never call Supabase or the public price website's API directly (Task 14/15's job, not Task 2's).
+- **Link Security** (Home shortcut): routes to a new dedicated `/coming-soon/link-security` stub, not into Security Access's code-*entry* screen — those are opposite directions (Home's shortcut is for *generating* a code to hand to a guard, Task 5's job; Security Access is for someone *entering* a code they were already given).
+- **Hamburger menu**: was a dead icon with no `onPress` handler wired to anything real — now a real working menu (My Profile / Log Out / Delete Account, the last two calling real, newly-added backend endpoints: `supabase.auth.signOut()` and a new `DELETE /v1/profiles/me` that deletes both the `profiles` row and the underlying `auth.users` account via the Admin API). Hidden entirely on the Profile screen itself (`hideMenu` prop) since "My Profile" there would be redundant — Profile shows a placeholder editable avatar (tappable, "coming soon" for now, real upload needs Supabase Storage + signed URLs, out of scope) in its place.
+- **Profile ID editing moved onto the Profile screen itself**, tap-to-edit directly on the value (pencil icon, checkmark/X to save/cancel) — no separate "[edit]" link/button, per explicit founder request. (Welcome screen's own inline `[edit]` — a different screen, right after signup — was left as-is since the brief explicitly specifies that pattern there.)
+- **Stale-data-on-navigate bug fixed everywhere**: Home, My Conduits, Profile, and Edit Profile all switched from a one-time `useEffect` to `useFocusEffect`, so every screen refetches real backend data every time it's navigated back to (Expo Router keeps pushed screens mounted, so a plain `useEffect` only ever ran once per app session).
+- **Back navigation added**: `AppShell` gained a `showBackButton` prop (swaps the avatar for a left-pointing arrow calling `router.back()`) — applied to Profile and Edit Profile, which are pushed on top of a tab and previously had no way back besides the browser/OS gesture.
+- **My Conduits' Generate/Enter ID buttons** changed from side-by-side to stacked vertically, matching Link Security/Browse Listings' full-width row pattern (explicit request).
+
+### 9. Environment/tooling notes for whoever picks this up next (including a future instance of this same agent)
+
+- **Backend runs on port 4055, not 4000.** `BACKEND_PORT=4000` got stuck as a leftover exported shell variable in this Codespace's persistent tool session (traced to an earlier `expo start` run's `env: export` step) and silently shadowed every `.env` edit — `dotenv` never overrides an already-set `process.env` value. Moving to 4055 and starting with the stale var explicitly unset in the same command fixed it. If port 4000 issues resurface, check `echo $BACKEND_PORT` in the shell before assuming `.env` is wrong.
+- **GitHub Codespaces port forwarding**: both the backend (4055) and Metro/web (8081) need `gh codespace ports visibility <port>:public -c $CODESPACE_NAME` after every restart — they do NOT stay public across a process restart. `EXPO_PUBLIC_API_BASE_URL` in `.env` must point at the backend's current public forwarded URL (`https://<codespace-name>-4055.app.github.dev`), and Metro must be restarted after changing it (Expo inlines `EXPO_PUBLIC_*` vars at bundle time, not runtime).
+- **Testing is done via `npx expo start --web`, not Expo Go on a physical phone.** Multiple approaches to reach a real iPhone via Expo Go were tried and confirmed dead ends this project: Codespaces port forwarding + `exp://` (iOS Expo Go rejects typed/pasted custom-scheme URLs), Expo's built-in `--tunnel` (bundled `@expo/ngrok` binary is deprecated server-side, confirmed via `CommandError: failed to start tunnel / remote gone away`), a manual `localtunnel` + QR/Safari-link workaround (also abandoned as not reliably reproducible). Web-mode testing in Chrome/the Codespaces browser preview, with device-size emulation via DevTools, is the current, working approach — accept this as the testing method going forward, don't re-attempt Expo Go unless device-specific behavior (camera, push notifications, etc.) genuinely requires it.
+- **New dependency added this session**: `@expo/vector-icons` (root `package.json` — official Expo package, needed for every real icon used above; previously the app had no icon library despite `expo-camera` etc. being installed). `@fastify/cors@10.1.0` added to `backend/package.json`.
+- **`app_refrence.png/` folder now has 11 images** (was 1 at the start of Task 2). If a fresh session's local checkout is missing some, run `git fetch origin main && git checkout origin/main -- app_refrence.png/` to pull them in without merging any other `main` changes into this branch.
+
+### What remains — genuinely open, NOT done, before Task 2 can be marked ✅ Complete
+
+**Dashboard-only, not code (need the founder or someone with Supabase dashboard access):**
+1. **Google OAuth returns 400** from Supabase's `/auth/v1/authorize` endpoint — the Google provider has never been enabled with a real Client ID/Secret in Supabase's dashboard (Authentication → Providers). The app's own redirect-URL logic was fixed (`constants/config.ts`'s `getOAuthRedirectUrl()` — uses the real browser origin on web, `agrolease://` on native) but that alone cannot fix a 400 from the provider itself being disabled.
+2. **Supabase's Site URL is the default `http://localhost:3000`** (Authentication → URL Configuration) — confirmed via a real simulated link-click that the confirmation redirect lands there, a dead page. Should be set to something real. Free to change on any tier — just hasn't been done.
+3. **No SMS provider configured** — phone-based signup/login/OTP and Forgot Password's "Reset via SMS" cannot work at all until one is set up in Supabase. The SMS button in Forgot Password is already honestly disabled with a "Coming soon" message reflecting this, not silently broken.
+
+**Not yet re-tested this session (were the plan for "next," before this session ran long):**
+4. Phone-based signup/login end to end (blocked on item 3 above regardless).
+5. Full Security Access → Security Details → Waiting for Approval loop — no real `link_codes` row has ever been generated yet (nothing creates one until Task 3/5 exist), so this has zero live verification so far, only code-review-level confidence.
+6. Forgot Password's *email* path (not SMS) end to end — "Send Reset Link" → Reset Verification Code → New Password. Not run for real this session; should work given the same link-based mechanism as signup confirmation, but not confirmed.
+7. Welcome screen's auto-generated Profile ID reveal + retry-on-collision logic, on an actual fresh signup, post-migration. Not exercised this session.
+8. Re-run the brief's full "Test Before Marking Complete" checklist top to bottom now that migrations are live and the major bugs above are fixed — most items were written against an assumption (no live DB) that's no longer true.
+
+### Immediate next steps for tomorrow's session (read in this order)
+
+1. Read `HANDOFF.md` (updated today) for the one-paragraph "where things stand."
+2. Read this section in full (you just did).
+3. Check `git log --oneline -10` on `feature/task2-auth-profile-id` to see exactly what's committed vs. what this update describes (should match — everything above was committed at the end of this session).
+4. Restart the backend and Metro (see "Environment/tooling notes" above for the exact port/CORS/env gotchas) and confirm both respond before touching anything else.
+5. Ask the founder directly whether they've had a chance to fix the Google OAuth provider and Site URL in the Supabase dashboard (items 1-2 above) — those unblock the largest remaining chunk of untested checklist items.
+6. Work through items 4-8 above in order, updating this file honestly as each one is actually confirmed (✅) or found broken (⚠️ Blocked with specifics) — do not mark Task 2 ✅ Complete until all of them have a real answer.

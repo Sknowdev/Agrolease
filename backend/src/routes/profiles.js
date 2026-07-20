@@ -41,7 +41,7 @@ export default async function profilesRoute(app) {
         .maybeSingle();
 
       if (existingError) {
-        throw new ApiError(500, 'profile_lookup_failed', 'Could not check for an existing profile.');
+        throw new ApiError(500, 'profile_lookup_failed', 'Could not check for an existing profile.', undefined, existingError);
       }
       if (existing) {
         return reply.status(200).send({ profile: existing });
@@ -68,7 +68,7 @@ export default async function profilesRoute(app) {
         .single();
 
       if (insertError) {
-        throw new ApiError(500, 'profile_create_failed', 'Could not create your profile. Please try again.');
+        throw new ApiError(500, 'profile_create_failed', 'Could not create your profile. Please try again.', undefined, insertError);
       }
 
       await createNotification({
@@ -100,7 +100,7 @@ export default async function profilesRoute(app) {
         .maybeSingle();
 
       if (error) {
-        throw new ApiError(500, 'profile_lookup_failed', 'Could not load your profile.');
+        throw new ApiError(500, 'profile_lookup_failed', 'Could not load your profile.', undefined, error);
       }
       if (!profile) {
         throw new ApiError(404, 'profile_not_found', 'No profile exists for this account yet.');
@@ -156,10 +156,45 @@ export default async function profilesRoute(app) {
         .single();
 
       if (error) {
-        throw new ApiError(500, 'profile_update_failed', 'Could not save your changes. Please try again.');
+        throw new ApiError(500, 'profile_update_failed', 'Could not save your changes. Please try again.', undefined, error);
       }
 
       return reply.send({ profile: updated });
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
+
+  /**
+   * DELETE /v1/profiles/me
+   * Deletes the authenticated user's account entirely - the `profiles`
+   * row (hard-deleted here since it's identity data intrinsically tied
+   * to one auth.users row being removed, not a business record covered
+   * by the Constitution's soft-delete convention) and the underlying
+   * auth.users row itself via the Auth Admin API (requires the
+   * service-role client already used elsewhere in this file - the
+   * anon/session-scoped client cannot delete an auth.users row).
+   *
+   * Called from the app's hamburger menu ("Delete Account"). There is
+   * no undo - the app is expected to confirm with the user before
+   * calling this, same as any other destructive action.
+   */
+  app.delete('/v1/profiles/me', { preHandler: requireAuth }, async (request, reply) => {
+    try {
+      const supabase = getSupabaseClient();
+      const userId = request.authUser.id;
+
+      const { error: profileDeleteError } = await supabase.from('profiles').delete().eq('id', userId);
+      if (profileDeleteError) {
+        throw new ApiError(500, 'profile_delete_failed', 'Could not delete your profile. Please try again.', undefined, profileDeleteError);
+      }
+
+      const { error: authDeleteError } = await supabase.auth.admin.deleteUser(userId);
+      if (authDeleteError) {
+        throw new ApiError(500, 'account_delete_failed', 'Could not delete your account. Please try again.', undefined, authDeleteError);
+      }
+
+      return reply.status(204).send();
     } catch (err) {
       return sendApiError(reply, err);
     }

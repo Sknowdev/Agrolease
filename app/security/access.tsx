@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { AuthShell } from '../../components/ui/AuthShell';
 import { Button } from '../../components/ui/Button';
 import { TextField } from '../../components/ui/TextField';
-import { Colors, Spacing } from '../../constants/colors';
+import { Colors, Radius, Spacing } from '../../constants/colors';
 import { apiGet } from '../../lib/apiClient';
 
 /**
@@ -15,7 +15,10 @@ import { apiGet } from '../../lib/apiClient';
  * Access QR Code. Reachable from both Login and Sign Up (equal-weight
  * button in that row), and via the deep link agrolease://link/{code}
  * (see app/_layout.tsx), which lands here directly with the code
- * pre-filled via the `code` route param.
+ * pre-filled via the `code` route param. Matches app_refrence.png
+ * IMG_1312: green card, "or" divider between Continue and Scan QR
+ * Code, a light restricted-access notice card and "← Back to Login"
+ * both outside/below the green card on white.
  */
 export default function SecurityAccess() {
   const params = useLocalSearchParams<{ code?: string }>();
@@ -59,15 +62,24 @@ export default function SecurityAccess() {
   }
 
   return (
-    <AuthShell>
-      <Text style={styles.heading}>Verify Your Access</Text>
+    <AuthShell
+      backLink={{ label: 'Back to Login', onPress: () => router.push('/login') }}
+      belowCard={
+        <View style={styles.noticeCard}>
+          <Text style={styles.noticeText}>
+            This area is restricted to authorized security personnel only.
+          </Text>
+        </View>
+      }
+    >
+      <Text style={styles.heading}>Security Access</Text>
       <Text style={styles.subheading}>
-        Enter the Security Access Code you were given, or scan the access QR code.
+        Enter your access code to continue or scan the QR code.
       </Text>
 
       <TextField
-        label="Security Access Code"
-        placeholder="ABC123"
+        onDark
+        placeholder="Access Code"
         autoCapitalize="characters"
         value={code}
         onChangeText={setCode}
@@ -75,21 +87,56 @@ export default function SecurityAccess() {
       />
 
       <Button label="Continue" onPress={handleContinue} loading={isSubmitting} />
-      <Button label="Scan Access QR Code" onPress={handleScanQr} variant="outline" />
+
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <Button label="Scan QR Code" onPress={handleScanQr} variant="outlineOnDark" />
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.xs,
   },
   subheading: {
     fontSize: 14,
-    color: Colors.muted,
+    color: Colors.mutedOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.lg,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginVertical: Spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  dividerText: {
+    color: Colors.mutedOnDark,
+    fontSize: 13,
+  },
+  noticeCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.lg,
+  },
+  noticeText: {
+    color: Colors.muted,
+    fontSize: 13,
+    textAlign: 'center',
   },
 });

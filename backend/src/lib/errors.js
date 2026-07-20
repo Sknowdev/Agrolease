@@ -4,11 +4,12 @@
  * { error: { code, message, field? } }. No freeform error strings."
  */
 export class ApiError extends Error {
-  constructor(statusCode, code, message, field) {
+  constructor(statusCode, code, message, field, cause) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
     this.field = field;
+    this.cause = cause;
   }
 
   toBody() {
@@ -20,6 +21,17 @@ export class ApiError extends Error {
 
 export function sendApiError(reply, err) {
   if (err instanceof ApiError) {
+    // Any 500-level ApiError still represents a genuine unexpected
+    // failure (a Supabase call that errored, etc.) - the code/message
+    // sent to the client is intentionally generic per the Constitution,
+    // but silently dropping the real cause here made this exact class
+    // of bug (a real Supabase error surfacing only as a bare 500 with
+    // no way to diagnose it) invisible in the logs. 4xx ApiErrors are
+    // expected/handled cases (validation, not-found, etc.) and stay
+    // unlogged as before.
+    if (err.statusCode >= 500) {
+      reply.log?.error?.({ code: err.code, cause: err.cause ?? err.message }, 'ApiError (5xx)');
+    }
     return reply.status(err.statusCode).send(err.toBody());
   }
   // Unexpected error - never leak internals, still follow the standard shape.

@@ -6,6 +6,15 @@ import { Colors, Radius, Spacing } from '../../constants/colors';
 type TextFieldProps = TextInputProps & {
   label?: string;
   error?: string;
+  /**
+   * Renders the light-on-dark style seen in app_refrence.png's auth
+   * cards (transparent field, light border, white/light placeholder
+   * text) instead of the default white-box style. Every field inside
+   * AuthShell's green card should set this true; fields on white
+   * backgrounds (Profile, Edit Profile, Security Details' own card is
+   * dark too - see that screen) use the corresponding variant.
+   */
+  onDark?: boolean;
 };
 
 /**
@@ -15,20 +24,21 @@ type TextFieldProps = TextInputProps & {
  * matching the "cannot be skipped" / validation requirements throughout
  * the brief (e.g. Security Details blocking submission until filled).
  */
-export function TextField({ label, error, style, ...inputProps }: TextFieldProps) {
+export function TextField({ label, error, onDark = false, style, ...inputProps }: TextFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.container}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, onDark && styles.labelOnDark]}>{label}</Text> : null}
       <TextInput
         style={[
           styles.input,
-          isFocused && styles.inputFocused,
+          onDark && styles.inputOnDark,
+          isFocused && (onDark ? styles.inputFocusedOnDark : styles.inputFocused),
           error && styles.inputError,
           style,
         ]}
-        placeholderTextColor={Colors.muted}
+        placeholderTextColor={onDark ? 'rgba(255,255,255,0.55)' : Colors.muted}
         onFocus={(e) => {
           setIsFocused(true);
           inputProps.onFocus?.(e);
@@ -55,6 +65,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
+  labelOnDark: {
+    color: Colors.textOnDark,
+  },
   input: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -65,7 +78,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
     backgroundColor: '#fff',
   },
+  inputOnDark: {
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    color: Colors.textOnDark,
+  },
   inputFocused: {
+    borderColor: Colors.accent,
+  },
+  inputFocusedOnDark: {
     borderColor: Colors.accent,
   },
   inputError: {

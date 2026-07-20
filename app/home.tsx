@@ -1,11 +1,11 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '../components/ui/AppShell';
-import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { Colors, Spacing } from '../constants/colors';
+import { Colors, Radius, Spacing } from '../constants/colors';
 import { apiGet } from '../lib/apiClient';
 
 type HomeSummary = {
@@ -15,63 +15,131 @@ type HomeSummary = {
   pendingInvitationsCount: number;
 };
 
+const ZERO_SUMMARY: HomeSummary = {
+  myConduitsCount: 0,
+  pendingCount: 0,
+  recentActivityCount: 0,
+  pendingInvitationsCount: 0,
+};
+
 /**
  * Home Screen (Task 2, Step 7) - real zero-state, per Amendment 8.
  *
- * Aggregate overview: My Conduits / Pending / Recent Activity /
- * Pending Invitations cards (all genuinely 0 for a brand-new profile,
- * not hardcoded - see GET /v1/home/summary), Generate Conduit ID CTA
- * (routes correctly, non-functional pending Task 3), a general/
- * browsable Live Commodity Prices widget, Link Security and Browse
- * Listings shortcuts, and a bottom tab bar where Create/Messages route
- * to bare "Coming soon" stubs (Tasks 3 and 10 build these out for real).
+ * Matches app_refrence.png's Home mockup (EA7D67AE-...png / IMG_1365):
+ * green header with avatar + hamburger, greeting centered (AppShell),
+ * a 2x2 stat grid with colored icon chips, "Generate Conduit ID" as
+ * its own dark green card, a Live Commodity Prices card, Link
+ * Security / Browse Listings as full-width row cards, and a floating
+ * icon-only bottom tab bar.
+ *
+ * Live Commodity Prices is a Coming Soon state, not hardcoded data -
+ * per the Engineering Constitution, the mobile app never calls
+ * Supabase or the public price website's API directly (both would
+ * bypass the Fastify backend). Real per-country/crop pricing is wired
+ * through the mobile backend in Task 14/15, not here.
+ *
+ * Link Security routes to a dedicated Coming Soon stub, not into
+ * Security Access (app/security/access.tsx) - that screen is for
+ * someone *entering* a code they were given; this shortcut is for
+ * *generating* one to hand to a guard, which is Task 5's job.
  */
 export default function Home() {
   const [summary, setSummary] = useState<HomeSummary | null>(null);
 
-  useEffect(() => {
-    apiGet<HomeSummary>('/v1/home/summary')
-      .then(setSummary)
-      .catch(() => setSummary({ myConduitsCount: 0, pendingCount: 0, recentActivityCount: 0, pendingInvitationsCount: 0 }));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      apiGet<HomeSummary>('/v1/home/summary')
+        .then(setSummary)
+        .catch(() => setSummary(ZERO_SUMMARY));
+    }, [])
+  );
 
-  const s = summary ?? { myConduitsCount: 0, pendingCount: 0, recentActivityCount: 0, pendingInvitationsCount: 0 };
+  const s = summary ?? ZERO_SUMMARY;
 
   return (
     <View style={styles.flex}>
-      <AppShell title="Welcome" subtitle="What are you doing today?">
+      <AppShell title="Welcome" subtitle="What are you doing today?" bottomInset={80}>
         <View style={styles.statGrid}>
-          <StatCard label="My Conduits" value={s.myConduitsCount} />
-          <StatCard label="Pending" value={s.pendingCount} />
-          <StatCard label="Recent Activity" value={s.recentActivityCount} />
-          <StatCard label="Pending Invitations" value={s.pendingInvitationsCount} />
+          <StatCard
+            label="My Conduits"
+            value={s.myConduitsCount}
+            subtitle="Active conduits"
+            iconBg="#E4F3E8"
+            iconColor={Colors.accentDark}
+            icon={<MaterialCommunityIcons name="layers-outline" size={18} color={Colors.accentDark} />}
+          />
+          <StatCard
+            label="Pending"
+            value={s.pendingCount}
+            subtitle="Awaiting action"
+            iconBg="#FBEADB"
+            iconColor="#D98A2B"
+            icon={<Ionicons name="time-outline" size={18} color="#D98A2B" />}
+          />
+          <StatCard
+            label="Recent Activity"
+            value={s.recentActivityCount}
+            subtitle="No recent activity"
+            iconBg="#E3EEFB"
+            iconColor="#3B78C4"
+            icon={<Ionicons name="pulse-outline" size={18} color="#3B78C4" />}
+          />
+          <StatCard
+            label="Pending Invitations"
+            value={s.pendingInvitationsCount}
+            subtitle="Invitations to respond"
+            iconBg="#EDE6F7"
+            iconColor="#7B5AC2"
+            icon={<Ionicons name="mail-outline" size={18} color="#7B5AC2" />}
+          />
         </View>
 
-        <Button
-          label="Generate Conduit ID"
+        <Pressable
+          style={styles.generateCard}
           onPress={() => router.push('/coming-soon/create')}
-        />
+        >
+          <View style={styles.generateIconCircle}>
+            <Ionicons name="add" size={20} color="#fff" />
+          </View>
+          <View style={styles.generateTextBlock}>
+            <Text style={styles.generateTitle}>Generate Conduit ID</Text>
+            <Text style={styles.generateSubtitle}>Create a new conduit and invite your partner</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
+        </Pressable>
 
         <Card>
-          <Text style={styles.sectionTitle}>Live Commodity Prices</Text>
-          <Text style={styles.mutedText}>
-            Browse current reference prices by country and crop. (Widget wiring is a later task -
-            this placeholder confirms the section exists on Home, per Amendment 8.)
-          </Text>
+          <View style={styles.widgetHeaderRow}>
+            <View style={styles.widgetIconCircle}>
+              <Ionicons name="trending-up" size={18} color="#D98A2B" />
+            </View>
+            <View>
+              <Text style={styles.sectionTitle}>Live Commodity Prices</Text>
+              <Text style={styles.mutedText}>Track real-time market prices</Text>
+            </View>
+          </View>
+
+          <View style={styles.comingSoonBlock}>
+            <Ionicons name="time-outline" size={22} color={Colors.muted} />
+            <Text style={styles.comingSoonText}>Coming soon</Text>
+            <Text style={styles.comingSoonSubtext}>
+              Real-time prices by country and crop are on the way.
+            </Text>
+          </View>
         </Card>
 
-        <View style={styles.shortcutRow}>
-          <Button
-            label="Link Security"
-            onPress={() => router.push('/security/access')}
-            variant="outline"
-          />
-          <Button
-            label="Browse Listings"
-            onPress={() => router.push('/coming-soon/browse-listings')}
-            variant="outline"
-          />
-        </View>
+        <ShortcutRow
+          icon={<Ionicons name="shield-checkmark-outline" size={20} color={Colors.accentDark} />}
+          title="Link Security"
+          subtitle="Link and manage security officers for your conduits"
+          onPress={() => router.push('/coming-soon/link-security')}
+        />
+        <ShortcutRow
+          icon={<MaterialCommunityIcons name="storefront-outline" size={20} color={Colors.accentDark} />}
+          title="Browse Listings"
+          subtitle="Discover land, farm operators and management services"
+          onPress={() => router.push('/coming-soon/browse-listings')}
+        />
       </AppShell>
 
       <BottomTabBar active="home" />
@@ -79,32 +147,106 @@ export default function Home() {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({
+  label,
+  value,
+  subtitle,
+  iconBg,
+  icon,
+}: {
+  label: string;
+  value: number;
+  subtitle: string;
+  iconBg: string;
+  iconColor: string;
+  icon: React.ReactNode;
+}) {
   return (
     <Card style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
+      <View style={[styles.statIconCircle, { backgroundColor: iconBg }]}>{icon}</View>
       <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statSubtitle}>{subtitle}</Text>
     </Card>
   );
 }
 
+function ShortcutRow({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.shortcutRow} onPress={onPress}>
+      <View style={styles.shortcutIconCircle}>{icon}</View>
+      <View style={styles.shortcutTextBlock}>
+        <Text style={styles.shortcutTitle}>{title}</Text>
+        <Text style={styles.shortcutSubtitle} numberOfLines={2}>
+          {subtitle}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={Colors.muted} />
+    </Pressable>
+  );
+}
+
 export function BottomTabBar({ active }: { active: 'home' | 'conduits' | 'create' | 'messages' }) {
-  const tabs: { key: typeof active; label: string; path: string }[] = [
-    { key: 'home', label: 'Home', path: '/home' },
-    { key: 'conduits', label: 'My Conduits', path: '/conduits' },
-    { key: 'create', label: 'Create', path: '/coming-soon/create' },
-    { key: 'messages', label: 'Messages', path: '/coming-soon/messages' },
+  const tabs: {
+    key: typeof active;
+    icon: (color: string, isActive: boolean) => React.ReactNode;
+    path: string;
+  }[] = [
+    {
+      key: 'home',
+      icon: (c, isActive) => <Ionicons name={isActive ? 'home' : 'home-outline'} size={22} color={c} />,
+      path: '/home',
+    },
+    {
+      key: 'conduits',
+      icon: (c, isActive) => (
+        <MaterialCommunityIcons name={isActive ? 'view-grid' : 'view-grid-outline'} size={22} color={c} />
+      ),
+      path: '/conduits',
+    },
+    { key: 'create', icon: () => null, path: '/coming-soon/create' },
+    {
+      key: 'messages',
+      icon: (c, isActive) => (
+        <Ionicons name={isActive ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'} size={22} color={c} />
+      ),
+      path: '/coming-soon/messages',
+    },
   ];
 
   return (
-    <View style={styles.tabBar}>
-      {tabs.map((tab) => (
-        <Pressable key={tab.key} style={styles.tabItem} onPress={() => router.push(tab.path as never)}>
-          <Text style={[styles.tabLabel, active === tab.key && styles.tabLabelActive]}>
-            {tab.label}
-          </Text>
-        </Pressable>
-      ))}
+    // Genuinely floating: a transparent wrapper with margin on every
+    // side (not padding flush to the screen edge), so the green
+    // background is visible around the pill - matching the reference's
+    // floating tab bar rather than a bar merged into the bottom edge.
+    <View style={styles.tabBarWrap}>
+      <View style={styles.tabBar}>
+        {tabs.map((tab) =>
+          tab.key === 'create' ? (
+            <Pressable key={tab.key} style={styles.tabItem} onPress={() => router.push(tab.path as never)}>
+              <View style={styles.createButton}>
+                <Ionicons name="add" size={24} color="#fff" />
+              </View>
+            </Pressable>
+          ) : (
+            <Pressable key={tab.key} style={styles.tabItem} onPress={() => router.push(tab.path as never)}>
+              <View style={[styles.tabIconWrap, active === tab.key && styles.tabIconWrapActive]}>
+                {tab.icon(active === tab.key ? Colors.accentDark : Colors.muted, active === tab.key)}
+              </View>
+            </Pressable>
+          )
+        )}
+      </View>
     </View>
   );
 }
@@ -117,50 +259,183 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   statCard: {
-    flexBasis: '48%',
+    flexBasis: '47%',
     flexGrow: 1,
   },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.primaryDark,
+  statIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
   },
   statLabel: {
     fontSize: 13,
     color: Colors.muted,
-    marginTop: Spacing.xs,
+    marginBottom: 2,
   },
-  sectionTitle: {
-    fontSize: 16,
+  statValue: {
+    fontSize: 26,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: Spacing.xs,
+  },
+  statSubtitle: {
+    fontSize: 12,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+  generateCard: {
+    backgroundColor: Colors.primaryDark,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  generateIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  generateTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  generateTitle: {
+    color: Colors.textOnDark,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  generateSubtitle: {
+    color: Colors.mutedOnDark,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  widgetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  widgetIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FBEADB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
   },
   mutedText: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.muted,
+    marginTop: 2,
+  },
+  comingSoonBlock: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    gap: 4,
+  },
+  comingSoonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: Spacing.xs,
+  },
+  comingSoonSubtext: {
+    fontSize: 12,
+    color: Colors.muted,
+    textAlign: 'center',
   },
   shortcutRow: {
+    backgroundColor: Colors.card,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
+  },
+  shortcutIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortcutTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  shortcutTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  shortcutSubtitle: {
+    fontSize: 12,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+  tabBarWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+    backgroundColor: 'transparent',
+    // Style-based pointerEvents (not the deprecated `pointerEvents`
+    // prop) - lets touches pass through the transparent margin around
+    // the pill to whatever's underneath, while the pill itself still
+    // catches its own taps (each child Pressable sets its own hit area).
+    pointerEvents: 'box-none',
   },
   tabBar: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: Radius.pill,
     paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    // React Native Web deprecated the shadow* style props in favor of
+    // the CSS-standard boxShadow shorthand (console warning: '"shadow*"
+    // style props are deprecated. Use "boxShadow"'). elevation still
+    // covers native Android; boxShadow covers web and iOS.
+    boxShadow: '0px 4px 12px rgba(0,0,0,0.12)',
+    elevation: 6,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
+    minWidth: 0,
   },
-  tabLabel: {
-    fontSize: 12,
-    color: Colors.muted,
+  tabIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  tabLabelActive: {
-    color: Colors.accentDark,
-    fontWeight: '700',
+  tabIconWrapActive: {
+    backgroundColor: '#E4F3E8',
+  },
+  createButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

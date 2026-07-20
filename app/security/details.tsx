@@ -51,22 +51,22 @@ export default function SecurityDetails() {
   }
 
   return (
-    <AuthShell>
+    <AuthShell backLink={{ label: 'Back to Login', onPress: () => router.replace('/login') }}>
       <Text style={styles.heading}>Security Details</Text>
       <Text style={styles.subheading}>
         These details identify you on every record you log. This step cannot be skipped.
       </Text>
 
       <TextField
-        label="Full Name"
-        placeholder="Your full name"
+        onDark
+        placeholder="Full Name"
         value={fullName}
         onChangeText={setFullName}
         error={errors.fullName}
       />
       <TextField
-        label="Phone Number"
-        placeholder="+234..."
+        onDark
+        placeholder="Phone Number"
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
@@ -80,14 +80,16 @@ export default function SecurityDetails() {
 
 const styles = StyleSheet.create({
   heading: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.xs,
   },
   subheading: {
     fontSize: 14,
-    color: Colors.muted,
+    color: Colors.mutedOnDark,
+    textAlign: 'center',
     marginBottom: Spacing.lg,
   },
 });
