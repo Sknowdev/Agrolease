@@ -58,7 +58,7 @@ export default function Conduits() {
         {loadError ? (
           <View style={styles.errorBanner}>
             <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
-            <Text style={styles.errorBannerText}>{loadError} - pull to refresh or tap the refresh icon above.</Text>
+            <Text style={styles.errorBannerText}>{loadError} - open the menu and tap Refresh.</Text>
           </View>
         ) : null}
         <TextField

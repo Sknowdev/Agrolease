@@ -2,12 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Modal,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -64,17 +62,11 @@ export function AppShell({
    */
   hideMenu = false,
   /**
-   * Called when the user pulls to refresh. Wires react-native's
-   * RefreshControl into the scroll view - works correctly on a real
-   * iOS/Android device via Expo Go, but React Native Web has no
-   * native pull gesture to hook into, so it's a visual no-op there.
-   * Since this whole project is currently being tested via
-   * `expo start --web` (see task_app_progress.md), a visible manual
-   * "Refresh" button is ALSO rendered next to the header whenever this
-   * prop is provided, so there's always a real, working way to reload
-   * a screen's data regardless of which platform it's tested on -
-   * this isn't decorative, it's the only refresh path that actually
-   * works in the environment this app has been tested in so far.
+   * Called when the user taps "Refresh" in the hamburger menu. No
+   * longer a separate header button/pull-to-refresh gesture (removed
+   * per explicit instruction - the founder didn't like the extra
+   * header icon) - now lives as a real menu item alongside Log Out/
+   * Delete Account, still fully functional, just relocated.
    */
   onRefresh,
 }: {
@@ -95,6 +87,7 @@ export function AppShell({
 
   async function handleRefresh() {
     if (!onRefresh || isRefreshing) return;
+    setIsMenuOpen(false);
     setIsRefreshing(true);
     try {
       await onRefresh();
@@ -169,21 +162,6 @@ export function AppShell({
             <Text style={styles.headerTitle}>{title}</Text>
             {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
           </View>
-          {onRefresh ? (
-            <Pressable
-              onPress={handleRefresh}
-              style={styles.refreshButton}
-              hitSlop={8}
-              accessibilityLabel="Refresh"
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="refresh" size={20} color="#fff" />
-              )}
-            </Pressable>
-          ) : null}
           {hideMenu ? (
             <View style={styles.menuButton} />
           ) : (
@@ -202,11 +180,6 @@ export function AppShell({
         <ScrollView
           style={styles.body}
           contentContainerStyle={[styles.bodyContent, { paddingBottom: Spacing.lg + bottomInset }]}
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-            ) : undefined
-          }
         >
           {children}
         </ScrollView>
@@ -216,6 +189,22 @@ export function AppShell({
         <Modal visible={isMenuOpen} transparent animationType="fade" onRequestClose={() => setIsMenuOpen(false)}>
           <Pressable style={styles.menuOverlay} onPress={() => setIsMenuOpen(false)}>
             <View style={styles.menuPanel}>
+              {onRefresh ? (
+                <>
+                  <MenuItem
+                    icon={
+                      isRefreshing ? (
+                        <Ionicons name="hourglass-outline" size={18} color={Colors.text} />
+                      ) : (
+                        <Ionicons name="refresh-outline" size={18} color={Colors.text} />
+                      )
+                    }
+                    label={isRefreshing ? 'Refreshing...' : 'Refresh'}
+                    onPress={handleRefresh}
+                  />
+                  <View style={styles.menuDivider} />
+                </>
+              ) : null}
               <MenuItem
                 icon={<Ionicons name="person-outline" size={18} color={Colors.text} />}
                 label="My Profile"

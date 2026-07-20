@@ -111,11 +111,11 @@ export default function ProfileView() {
   }
 
   return (
-    <AppShell title="My Profile" showBackButton hideMenu onRefresh={loadProfile}>
+    <AppShell title="My Profile" showBackButton hideMenu>
       {loadError ? (
         <View style={styles.errorBanner}>
           <Ionicons name="alert-circle-outline" size={16} color={Colors.danger} />
-          <Text style={styles.errorBannerText}>{loadError} - pull to refresh or tap the refresh icon above.</Text>
+          <Text style={styles.errorBannerText}>{loadError}</Text>
         </View>
       ) : null}
       <View style={styles.avatarSection}>
