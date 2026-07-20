@@ -186,4 +186,16 @@ Two small, honest deviations found while actually building Task 1 — neither ch
 
 ---
 
+## 16. Task 2 (2026-07-20, continued) — signup Display Name/Phone silently lost across the email-confirmation gap; Task 2 deliberately left "known gaps documented" rather than marked complete
+
+**Plan says (Task-02-Auth-ProfileID.md):** Sign Up collects Display Name (required) and Phone (optional), which become part of the created `profiles` row. No mention of how these values survive the gap between typing them and the profile actually being created (which, per Section 15 above, only happens after email confirmation — a real navigation away from the Sign Up screen).
+
+**What was actually found and built:** `signup.tsx` held Display Name/Phone only in local component state, which React (and Expo Router) discards once the user navigates to Verification and then away to their email client — a real, confirmed data-loss bug, not a hypothetical one (one real founder account, `afterglowmindd@gmail.com`, is permanently stuck with a placeholder name as a result, created before the fix existed and unrecoverable since the original typed value was never stored anywhere). Fixed by stashing both values in Supabase's own `user_metadata` at `signUp()` time — this storage genuinely survives the confirmation-email gap (it's server-side, not app state) — and reading it back in both `login.tsx`'s and `welcome.tsx`'s profile-creation calls, falling back to an email-derived placeholder only when `user_metadata` is genuinely empty (pre-fix accounts).
+
+**Also decided this session:** Task 2 is being carried forward to Task 3 without being marked ✅ Complete, per explicit founder instruction — real bugs kept surfacing specifically through live usage throughout this session (not code review), and the same pattern is expected to continue once Task 3's Conduit features start exercising Task 2's auth/profile code across two real linked users. Rather than keep chasing Task 2's remaining checklist items in isolation with no new usage to surface what's still broken, work proceeds to Task 3 with the one remaining dashboard-only gap (no SMS provider — phone auth) explicitly documented as open, not silently dropped. This is a testing-philosophy/scheduling decision, not a technical one — logged here per this file's own rule.
+
+**Why this belongs in this log:** a real, confirmed data-loss bug (not a design choice) that directly contradicts the brief's implicit assumption that typed signup fields simply become the profile — worth recording so nobody "fixes" `user_metadata` usage away later without knowing why it's there. Full detail: `task_folder/task_app_progress.md`'s final "Task 2 — Session Update 2026-07-20 (final)" section.
+
+---
+
 *Update this file every time a build decision diverges from a planning document, with the same structure: what the plan says, what was actually built, and why. Do not let a divergence go undocumented — that's the whole point of this file.*
