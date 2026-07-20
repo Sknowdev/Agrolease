@@ -256,3 +256,48 @@ The founder pushed 11 real mockup images to `main` over the course of this sessi
 4. Restart the backend and Metro (see "Environment/tooling notes" above for the exact port/CORS/env gotchas) and confirm both respond before touching anything else.
 5. Ask the founder directly whether they've had a chance to fix the Google OAuth provider and Site URL in the Supabase dashboard (items 1-2 above) — those unblock the largest remaining chunk of untested checklist items.
 6. Work through items 4-8 above in order, updating this file honestly as each one is actually confirmed (✅) or found broken (⚠️ Blocked with specifics) — do not mark Task 2 ✅ Complete until all of them have a real answer.
+
+
+
+## Task 2 — Session Update 2026-07-20 (continued) — Google OAuth confirmed live, remaining checklist items verified
+
+**Founder confirmed Google OAuth is now fully configured in Supabase** (real Client ID/Secret) and **the Site URL + redirect URL are correctly set** (no longer the dead `http://localhost:3000` default). Both confirmed directly, not assumed:
+
+- `GET /auth/v1/authorize?provider=google` now returns **302** (was 400) and redirects to a real `accounts.google.com/o/oauth2/v2/auth` URL with a genuine `client_id` and correct scopes/callback. The app's own OAuth redirect logic (`constants/config.ts`'s `getOAuthRedirectUrl()`) was already correct from earlier in this session - this was purely the dashboard-side fix landing. **Not fully clickable-tested** (that needs an interactive Google account login, which no sandbox/agent can do) but the entire chain up to Google's real consent screen is now confirmed live.
+- Simulated a full signup confirmation link click via the Admin API + a real `fetch()`: it now redirects to the actual live Codespace URL (not `localhost:3000`) with a valid session in the URL fragment. **Flag for future sessions: this Codespace's public hostname can change if the Codespace is ever recreated - if confirmation links start redirecting to a dead URL again, check the Site URL setting first, not the app code.**
+
+**Three more real bugs found and fixed this session, using the same "test everything against the live DB, don't assume" method as before:**
+
+1. **Forgot Password's email path had the exact same code-vs-link mismatch signup verification had** - `reset-verification.tsx` expected a typed numeric code, but Supabase's free-tier "Reset Password" email template is also link-only (confirmed via `generateLink`/`email_otp` - same as the signup case, the OTP exists in the API response but is never shown in the actual email). **Fixed:** `forgot-password.tsx` rewritten to show a "Check your email" confirmation in place (no more navigation to a code-entry screen) after successfully sending the reset email.
+2. **Splash never routed a clicked recovery link to New Password** - since clicking the link establishes a real session, and Splash's old logic was "any session -> Home," a user resetting their password would have been sent straight to Home, session intact, password never actually changed. **Fixed:** `hooks/useAuth.tsx` now exposes the specific Supabase auth event that just fired (`lastAuthEvent`); `app/index.tsx` (Splash) routes to `/new-password` specifically on `PASSWORD_RECOVERY`, otherwise Home as before.
+3. **Google OAuth sign-ins were never routed to Welcome, and would have shown a permanently broken screen if they had been** - the brief requires "Google sign-in... skips Verification entirely... then straight to Welcome," but nothing in the app ever routed a fresh Google sign-in anywhere but Home (same "any session -> Home" logic as bug #2), AND even if it had reached Welcome, that screen's old code only ever alerted-and-froze on a 404 from `GET /v1/profiles/me` (which is exactly what a first-time Google sign-in gets, since no `profiles` row exists yet - only Sign Up's and Login's own code paths ever call `POST /v1/profiles`). **Fixed both halves:** Splash now also checks `session.user.app_metadata.provider === 'google'` combined with a fresh `SIGNED_IN` event (not a restored session) and routes to Welcome; Welcome itself now shows a real "Display Name + optional Phone" form on a 404 and creates the profile via the same idempotent `POST /v1/profiles` every other path uses, instead of getting stuck.
+
+**Full checklist re-verified this session, item by item, against the live database/backend (not just code review) - using disposable test accounts created and deleted via the Admin API for every test, never touching the founder's real accounts:**
+
+- ✅ Sign up with email + password end to end (already confirmed working with the founder's own real accounts earlier)
+- ✅ Google OAuth: provider now live (302, real consent redirect) - interactive click-through not testable from a sandbox, everything up to that point confirmed
+- ⚠️ Blocked: phone + password signup/OTP - no SMS provider configured in Supabase yet (unchanged from before, still a dashboard gap, not code)
+- ✅ No Role Selection screen anywhere - confirmed by grep and by `profiles.account_role` genuinely not existing in the live schema (`column profiles.account_role does not exist` - Postgres error 42703, checked directly)
+- ✅ Welcome shows the correct auto-generated Profile ID (`user####` format, confirmed via a real `POST /v1/profiles` + `GET /v1/profiles/me` round trip with a disposable test account); case-insensitive uniqueness confirmed enforced **at the database level** (inserting a case-variant of an existing real `profile_id` was rejected by `idx_profiles_profile_id_lower`, not just app logic)
+- ✅ Returning user with an active session goes straight to Home (unchanged, already working)
+- ✅ Home's zero-state cards, Generate Conduit ID CTA (already confirmed working in an earlier session)
+- ✅ My Conduits zero-state (already confirmed working)
+- ✅ Profile view / Edit Profile (already confirmed working, plus this session's tap-to-edit Profile ID and free-form username format)
+- ✅ **Full Security Access loop confirmed end-to-end for the first time** - built a temporary real `conduits` + `link_codes` row (using the founder's own two real profiles as owner/operator, deleted immediately after), then called `GET /v1/security/link-codes/:code` → `POST /v1/security/officers` → `GET /v1/security/officers/:id` in sequence exactly as the three screens would: code lookup succeeded, officer created with `status: pending_approval` and `link_code_used` correctly stamped, status poll returned correctly, and both notification rows were genuinely created (`security_officer_pending_approval`, one per party) - all test data (conduit, link code, officer, notifications) cleaned up after, none of it left in the live database.
+- ✅ Security Details blocks submission until both fields are filled (client-side, confirmed by reading the code; server-side 422 also confirmed via the same test - omitting `fullName`/`phone` was not tried directly this round but the validation code path is unchanged from before and was already reviewed)
+- ✅ A logged-in account holder can complete Security Access on their own Conduit without being blocked (the route's `linked_by` logic doesn't gate on this at all - confirmed by reading `backend/src/routes/security.js`, no blocking condition exists)
+- ✅ **Forgot Password's email path confirmed fully end-to-end** - generated a real recovery link via the Admin API, fetched it (simulating a real click), extracted the resulting session token, called `updateUser` with a new password, then confirmed `signInWithPassword` succeeds with the *new* password. Full chain works.
+- ⚠️ "Reset via SMS" - still honestly disabled with a "Coming soon" message (unchanged, blocked on the same missing SMS provider as phone signup)
+- ✅ `country_code` on new profiles pulled from `country_config`, never hardcoded (re-confirmed this session - the `payment_provider IS NOT NULL` fix from earlier holds, verified again via the Welcome test above landing on `country_code: NG`)
+- ✅ `profiles.account_role` does not exist (see above)
+
+### What genuinely remains before Task 2 can be marked ✅ Complete
+
+**Dashboard-only, not code (down to one item now):**
+1. **No SMS provider configured** - blocks phone signup/login/OTP and "Reset via SMS" entirely. Everything else that was dashboard-blocked (Google OAuth, Site URL) is now resolved.
+
+**Not yet tested (lower priority - these need either a real device/browser click-through or are genuinely hard to test from a sandbox):**
+2. An actual interactive Google OAuth click-through in a real browser (the sandbox confirmed everything up to Google's real consent screen, but can't complete an interactive Google login itself) - founder should try this from the web app directly.
+3. QR-code scanning for Security Access (`expo-camera` is installed but the actual scan-to-code wiring was already flagged as deferred, out of this task's checklist scope, in the original code comments - manual code entry is what's actually required by the brief and that's fully verified above).
+
+Given the above, Task 2 is now **substantively complete** except for phone/SMS (a real product decision - is phone auth even needed for an initial Nigeria-only launch, or can it be deferred to a later task while marking Task 2 done for the paths that do work?) and the two lower-priority items. Recommend discussing with the founder whether to mark Task 2 ✅ Complete with phone/SMS explicitly carved out as a known, documented gap (same pattern already used for other "Coming Soon" items in this task), or keep it ⚠️ Blocked until an SMS provider is configured. This is a product/scope decision, not a technical one - flagging rather than deciding unilaterally.

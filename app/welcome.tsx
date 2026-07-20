@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
-import { apiPatch, apiGet } from '../lib/apiClient';
+import { ApiClientError, apiGet, apiPatch, apiPost } from '../lib/apiClient';
 
 type Profile = {
   profile_id: string;
@@ -21,13 +21,34 @@ type Profile = {
  * use AuthShell's dark card - this is the one screen in the auth flow
  * that visually matches Home going forward. No Role Selection step
  * here per Amendment 7 - Verification routes straight here already.
+ *
+ * Google sign-in skips Verification entirely and lands here directly
+ * (per the brief: "still offers optional Phone + Display Name if
+ * missing, then straight to Welcome") - meaning this screen can be the
+ * very first place a Google-signed-in user's `profiles` row gets
+ * created, since Sign Up's own POST /v1/profiles call never runs for
+ * that path. A plain GET /v1/profiles/me 404s in that case (confirmed
+ * directly - no profile exists yet), which the previous version of
+ * this screen only alerted on and got permanently stuck at
+ * `profile_id: '...'`. Now: a 404 here shows a real "complete your
+ * profile" form (Display Name required, Phone optional) instead of a
+ * dead end, and creates the profile via the same idempotent
+ * POST /v1/profiles every other entry path uses.
  */
 export default function Welcome() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [needsSetup, setNeedsSetup] = useState(false);
+
+  const [setupDisplayName, setSetupDisplayName] = useState('');
+  const [setupPhone, setSetupPhone] = useState('');
+  const [setupError, setSetupError] = useState<string | undefined>();
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+
+  const [isEditingId, setIsEditingId] = useState(false);
   const [editedId, setEditedId] = useState('');
-  const [error, setError] = useState<string | undefined>();
-  const [isSaving, setIsSaving] = useState(false);
+  const [idError, setIdError] = useState<string | undefined>();
+  const [isSavingId, setIsSavingId] = useState(false);
 
   useEffect(() => {
     apiGet<{ profile: Profile }>('/v1/profiles/me')
@@ -35,23 +56,91 @@ export default function Welcome() {
         setProfile(p);
         setEditedId(p.profile_id);
       })
-      .catch((err) => Alert.alert('Could not load your profile', err.message));
+      .catch((err) => {
+        if (err instanceof ApiClientError && err.code === 'profile_not_found') {
+          setNeedsSetup(true);
+          return;
+        }
+        Alert.alert('Could not load your profile', err instanceof Error ? err.message : 'Please try again.');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
+  async function handleCreateProfile() {
+    if (!setupDisplayName.trim()) {
+      setSetupError('Display Name is required.');
+      return;
+    }
+    setSetupError(undefined);
+    setIsCreatingProfile(true);
+    try {
+      const { profile: created } = await apiPost<{ profile: Profile }>('/v1/profiles', {
+        displayName: setupDisplayName.trim(),
+        phone: setupPhone.trim() || undefined,
+      });
+      setProfile(created);
+      setEditedId(created.profile_id);
+      setNeedsSetup(false);
+    } catch (err) {
+      setSetupError(err instanceof Error ? err.message : 'Could not save. Please try again.');
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  }
+
   async function handleSaveProfileId() {
-    setIsSaving(true);
-    setError(undefined);
+    setIsSavingId(true);
+    setIdError(undefined);
     try {
       const { profile: updated } = await apiPatch<{ profile: Profile }>('/v1/profiles/me', {
         profileId: editedId.trim(),
       });
       setProfile(updated);
-      setIsEditing(false);
+      setIsEditingId(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save. Please try again.');
+      setIdError(err instanceof Error ? err.message : 'Could not save. Please try again.');
     } finally {
-      setIsSaving(false);
+      setIsSavingId(false);
     }
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (needsSetup) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.checkCircle}>
+          <Text style={styles.checkMark}>✓</Text>
+        </View>
+        <Text style={styles.title}>Almost there!</Text>
+        <Text style={styles.subtitle}>Add a display name to finish setting up your account.</Text>
+
+        <Card style={styles.card}>
+          <TextField
+            label="Display Name"
+            placeholder="Your name or business name"
+            value={setupDisplayName}
+            onChangeText={setSetupDisplayName}
+            error={setupError}
+          />
+          <TextField
+            label="Phone Number (optional)"
+            placeholder="+234..."
+            keyboardType="phone-pad"
+            value={setupPhone}
+            onChangeText={setSetupPhone}
+          />
+        </Card>
+
+        <Button label="Continue" onPress={handleCreateProfile} loading={isCreatingProfile} />
+      </View>
+    );
   }
 
   return (
@@ -63,12 +152,12 @@ export default function Welcome() {
 
       <Card style={styles.card}>
         <Text style={styles.cardLabel}>Your Profile ID</Text>
-        {isEditing ? (
+        {isEditingId ? (
           <>
-            <TextField value={editedId} onChangeText={setEditedId} error={error} autoCapitalize="none" />
+            <TextField value={editedId} onChangeText={setEditedId} error={idError} autoCapitalize="none" />
             <View style={styles.editActions}>
-              <Button label="Save" onPress={handleSaveProfileId} loading={isSaving} />
-              <Pressable onPress={() => setIsEditing(false)} style={styles.cancelLink}>
+              <Button label="Save" onPress={handleSaveProfileId} loading={isSavingId} />
+              <Pressable onPress={() => setIsEditingId(false)} style={styles.cancelLink}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
             </View>
@@ -76,7 +165,7 @@ export default function Welcome() {
         ) : (
           <View style={styles.idRow}>
             <Text style={styles.idValue}>{profile?.profile_id ?? '...'}</Text>
-            <Pressable onPress={() => setIsEditing(true)}>
+            <Pressable onPress={() => setIsEditingId(true)}>
               <Text style={styles.editLink}>[edit]</Text>
             </Pressable>
           </View>
@@ -114,6 +203,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: Colors.text,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.muted,
+    textAlign: 'center',
   },
   card: {
     width: '100%',

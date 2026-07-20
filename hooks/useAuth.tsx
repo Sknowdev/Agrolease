@@ -1,4 +1,4 @@
-import type { Session } from '@supabase/supabase-js';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { supabase } from '../lib/supabaseClient';
@@ -11,17 +11,31 @@ import { supabase } from '../lib/supabaseClient';
  * goes straight to Home, never back through auth." Every screen that
  * needs to know whether someone is logged in reads from this context
  * instead of re-querying Supabase directly.
+ *
+ * Also exposes `lastAuthEvent` so Splash can distinguish a real login
+ * session from a PASSWORD_RECOVERY session - Supabase's Forgot
+ * Password email link (see app/forgot-password.tsx) establishes a
+ * genuine session directly via the URL fragment once clicked, and
+ * without this distinction Splash would route a just-clicked recovery
+ * link straight to Home (since a session now exists) instead of New
+ * Password, skipping the actual password-reset step entirely.
  */
 type AuthContextValue = {
   session: Session | null;
   isLoading: boolean;
+  lastAuthEvent: AuthChangeEvent | null;
 };
 
-const AuthContext = createContext<AuthContextValue>({ session: null, isLoading: true });
+const AuthContext = createContext<AuthContextValue>({
+  session: null,
+  isLoading: true,
+  lastAuthEvent: null,
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastAuthEvent, setLastAuthEvent] = useState<AuthChangeEvent | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -32,8 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      setLastAuthEvent(event);
       setIsLoading(false);
     });
 
@@ -43,7 +58,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  return <AuthContext.Provider value={{ session, isLoading }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ session, isLoading, lastAuthEvent }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
