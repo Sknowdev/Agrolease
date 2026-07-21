@@ -8,6 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "dev": "node scripts/dev-all.js",
     "typecheck": "tsc --noEmit",
     "backend:install": "npm install --prefix backend",
     "backend:dev": "npm run dev --prefix backend"
@@ -18,6 +19,7 @@
     "@supabase/supabase-js": "^2.110.2",
     "expo": "~54.0.36",
     "expo-camera": "~17.0.10",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",
     "expo-image-picker": "~17.0.11",

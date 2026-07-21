@@ -199,3 +199,17 @@ Two small, honest deviations found while actually building Task 1 — neither ch
 ---
 
 *Update this file every time a build decision diverges from a planning document, with the same structure: what the plan says, what was actually built, and why. Do not let a divergence go undocumented — that's the whole point of this file.*
+
+
+
+---
+
+## 17. Task 3 (2026-07-21) — dead-session recovery added to the shared API client; Codespaces backend port no longer needs to be publicly forwarded
+
+**Plan says:** neither `Task-02-Auth-ProfileID.md` nor `Task-03-Conduit-Creation-Invitation.md` says anything about what happens when a Supabase session's refresh token becomes invalid mid-use, and no planning doc specifies how this Codespace's networking should be configured — both are implementation details discovered and fixed through real live usage, not deviations from a written spec.
+
+**What was actually found and built:**
+- **`lib/apiClient.ts` had no recovery path for a dead session** — `supabase.auth.getSession()` keeps returning a stale, non-null session forever once its refresh token is invalidated server-side, and nothing client-side ever treated a 401 from the backend as "you are actually logged out now." Confirmed live: the founder got stuck in an infinite 401 loop after attempting to link two Conduit accounts, with `signOut()` itself returning 403 (Supabase rejecting an already-invalid refresh token). Fixed: any 401 from the backend now triggers an automatic `signOut()` + redirect to `/login`. This is a Task 2-era gap in shared infrastructure, not scoped to Conduits — flagged here since a future task touching auth code should know this exists and why.
+- **GitHub Codespaces requires the backend's own forwarded port to be manually set to Public after every process restart**, and doing so via `gh codespace ports visibility` from inside the Codespace itself proved unreliable this session (worked intermittently, sometimes didn't register the port at all). Rather than keep fighting this manually every session, `metro.config.js` (new) now proxies `/v1/*` and `/health` requests arriving at Metro's own dev server (port 8081) straight through to the local backend (port 4055) via a plain Node `http` request — no new dependency added. `constants/config.ts`'s API base URL now resolves to the web build's own origin instead of a separate backend URL. **Only port 8081 needs to be public now.** Native (iOS/Android) builds are unaffected, since they never go through Metro's dev server at request time and still use `EXPO_PUBLIC_API_BASE_URL` directly.
+
+**Why this belongs in this log:** both are genuine, confirmed-live findings that change how the app and this Codespace's networking actually behave, following this file's own rule ("never let a divergence go undocumented") — not cosmetic, not guessed. Full session narrative: `task_folder/task_app_progress.md`'s "Task 3 — Session Update 2026-07-21" section. Itemized list of every other addition from this session: `task_folder/Task-03-Additions-Beyond-Spec.md`.

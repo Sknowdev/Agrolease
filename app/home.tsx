@@ -118,7 +118,7 @@ export default function Home() {
 
         <Pressable
           style={styles.generateCard}
-          onPress={() => router.push('/coming-soon/create')}
+          onPress={() => router.push('/conduit/side')}
         >
           <View style={styles.generateIconCircle}>
             <Ionicons name="add" size={20} color="#fff" />
@@ -248,7 +248,7 @@ export function BottomTabBar({ active }: { active: 'home' | 'conduits' | 'create
       ),
       path: '/conduits',
     },
-    { key: 'create', icon: () => null, path: '/coming-soon/create' },
+    { key: 'create', icon: () => null, path: '/conduit/side' },
     {
       key: 'messages',
       icon: (c, isActive) => (

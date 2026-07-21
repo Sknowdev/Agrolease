@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 /**
  * Runtime configuration for the AgroLease mobile app.
  *
@@ -7,8 +9,34 @@
  * lib/supabaseClient.ts for the narrow cases the app is allowed to read
  * directly (e.g. auth session), not as a general-purpose DB client.
  */
+
+/**
+ * Resolves the backend's base URL.
+ *
+ * On web, this deliberately points at the CURRENT browser origin (the
+ * same host/port the web app itself was loaded from) rather than
+ * EXPO_PUBLIC_API_BASE_URL directly - Metro's own dev server (see
+ * metro.config.js) proxies /health and /v1/* through to the real
+ * backend on that same origin. This exists specifically because, in
+ * GitHub Codespaces, the backend's own port needs a SEPARATE forwarded
+ * port manually set to Public after every restart - a step that's easy
+ * to miss and produces a confusing CORS/ERR_FAILED error that looks
+ * like an app bug. Routing through Metro's own already-public origin
+ * removes that manual step for web development entirely.
+ *
+ * Native (iOS/Android) builds never go through Metro's dev server at
+ * request time and have no "current origin" concept - they always use
+ * EXPO_PUBLIC_API_BASE_URL directly, unaffected by any of this.
+ */
+function resolveApiBaseUrl(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
+}
+
 export const Config = {
-  apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:4000',
+  apiBaseUrl: resolveApiBaseUrl(),
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
 };

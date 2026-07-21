@@ -1,3 +1,5 @@
+import { router } from 'expo-router';
+
 import { Config } from '../constants/config';
 import { supabase } from './supabaseClient';
 
@@ -37,12 +39,60 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+/**
+ * Real bug fix (found live, 2026-07-20): a Supabase session whose
+ * refresh token has been invalidated server-side (revoked, expired
+ * past its refresh window, or from switching between two accounts in
+ * the same session) makes `supabase.auth.getSession()` keep returning
+ * a *stale but non-null* session forever - it does not clear itself or
+ * throw. Every backend call then sends a dead access token and gets a
+ * 401 from `requireAuth` (backend/src/middleware/auth.js), but nothing
+ * client-side ever recognized that as "you are actually logged out
+ * now" - every screen just displayed the 401's error banner and told
+ * the user to open the menu and refresh, which re-sends the exact same
+ * dead token and 401s again, forever, surviving even a full page
+ * reload since the dead session is what's in AsyncStorage/localStorage.
+ * Reported directly: infinite 401s after attempting to link two
+ * Conduit accounts together, and `supabase.auth.signOut()` itself
+ * returning 403 (Supabase's own server-side signOut call also rejects
+ * an already-invalid refresh token) - i.e. the user was stuck logged
+ * in from the app's point of view with no way back to Login at all.
+ *
+ * Fix: any 401 from OUR backend (not a 401 from some unrelated third
+ * party) is now treated as "the session is dead, full stop" - clears
+ * whatever is left of it locally (ignoring signOut's own error, since
+ * a session that's already invalid server-side has nothing left to
+ * revoke) and hard-redirects to Login. This runs once per dead-session
+ * detection, not per failed request, via `isHandlingSessionExpiry`.
+ */
+let isHandlingSessionExpiry = false;
+
+async function handleSessionExpired() {
+  if (isHandlingSessionExpiry) return;
+  isHandlingSessionExpiry = true;
+  try {
+    await supabase.auth.signOut().catch(() => undefined);
+  } finally {
+    router.replace('/login');
+    // Reset shortly after navigating - a genuinely fresh login should
+    // be able to trigger this same handling again in the future if it
+    // ever happens again, rather than being permanently disabled after
+    // firing once per app session.
+    setTimeout(() => {
+      isHandlingSessionExpiry = false;
+    }, 2000);
+  }
+}
+
 async function parseResponse<T>(res: Response): Promise<T> {
   const isJson = res.headers.get('content-type')?.includes('application/json');
   const body = isJson ? await res.json() : null;
 
   if (!res.ok) {
     const err = body?.error;
+    if (res.status === 401) {
+      void handleSessionExpired();
+    }
     throw new ApiClientError(
       res.status,
       err?.code ?? 'unknown_error',

@@ -4,12 +4,16 @@ import { requireAuth } from '../middleware/auth.js';
 
 /**
  * GET /v1/home/summary
- * Backs Home's zero-state cards (Step 7): My Conduits, Pending, Recent
- * Activity, Pending Invitations - each a real count, not a hardcoded 0.
- * For a brand-new profile these will genuinely all be 0 (no Conduits
- * exist until Task 3), but the route itself is real - not a stub that
- * only returns zeros. Populated (non-zero) behavior falls out naturally
- * once Task 3 creates real Conduits; no change needed here later.
+ * Backs Home's zero-state cards (Step 7), now populated for real
+ * (Task 3, Step 9): My Conduits (active), Pending (draft/pending_payment),
+ * Recent Activity (unread notifications), Pending Invitations (unaccepted
+ * drafts this user created - i.e. still in 'draft' status with only this
+ * user's side filled in).
+ *
+ * "Pending Invitations" is intentionally scoped to drafts the CALLER
+ * created (their own side is set, the partner slot is still empty),
+ * not every draft they can see - it answers "how many invitations am I
+ * personally waiting on a partner for," matching Step 9's own wording.
  */
 export default async function homeRoute(app) {
   app.get('/v1/home/summary', { preHandler: requireAuth }, async (request, reply) => {
@@ -17,7 +21,7 @@ export default async function homeRoute(app) {
       const supabase = getSupabaseClient();
       const profileId = request.authUser.id;
 
-      const [conduitsCount, pendingCount, notificationsCount] = await Promise.all([
+      const [conduitsCount, pendingCount, notificationsCount, pendingInvitations] = await Promise.all([
         supabase
           .from('conduits')
           .select('id', { count: 'exact', head: true })
@@ -27,48 +31,37 @@ export default async function homeRoute(app) {
           .from('conduits')
           .select('id', { count: 'exact', head: true })
           .or(`land_owner_id.eq.${profileId},farm_operator_id.eq.${profileId}`)
-          .eq('status', 'pending_payment'),
+          .in('status', ['draft', 'pending_payment']),
         supabase
           .from('notifications')
           .select('id', { count: 'exact', head: true })
           .eq('recipient_id', profileId)
           .eq('read', false),
+        supabase
+          .from('conduits')
+          .select('id, land_owner_id, farm_operator_id')
+          .or(`land_owner_id.eq.${profileId},farm_operator_id.eq.${profileId}`)
+          .eq('status', 'draft'),
       ]);
+
+      // A draft only counts as "pending invitation I'm waiting on" when
+      // the other FK slot is still genuinely empty or still points back
+      // at the caller themselves (the creation-time placeholder for the
+      // farm_operator-side creator case - see routes/conduits.js's
+      // POST /v1/conduits note). Once a real partner exists the status
+      // is no longer 'draft' anyway, so this mostly guards against that
+      // placeholder self-reference.
+      const pendingInvitationsCount = (pendingInvitations.data ?? []).filter((c) => {
+        const otherSideId = c.land_owner_id === profileId ? c.farm_operator_id : c.land_owner_id;
+        return !otherSideId || otherSideId === profileId;
+      }).length;
 
       return reply.send({
         myConduitsCount: conduitsCount.count ?? 0,
         pendingCount: pendingCount.count ?? 0,
         recentActivityCount: notificationsCount.count ?? 0,
-        pendingInvitationsCount: 0, // no invitations table exists yet - real Task 3 concern
+        pendingInvitationsCount,
       });
-    } catch (err) {
-      return sendApiError(reply, err);
-    }
-  });
-
-  /**
-   * GET /v1/conduits/mine
-   * Backs My Conduits (Step 8) - a pure list. Empty array for a
-   * brand-new profile is the correct, real zero-state response (not a
-   * hardcoded stub) - the app renders "You don't have any conduits yet"
-   * when this comes back empty.
-   */
-  app.get('/v1/conduits/mine', { preHandler: requireAuth }, async (request, reply) => {
-    try {
-      const supabase = getSupabaseClient();
-      const profileId = request.authUser.id;
-
-      const { data: conduits, error } = await supabase
-        .from('conduits')
-        .select('id, conduit_id, land_name, status, land_owner_id, farm_operator_id')
-        .or(`land_owner_id.eq.${profileId},farm_operator_id.eq.${profileId}`)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        return sendApiError(reply, error);
-      }
-
-      return reply.send({ conduits: conduits ?? [] });
     } catch (err) {
       return sendApiError(reply, err);
     }

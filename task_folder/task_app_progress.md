@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | 1 | Project Scaffolding + Full Database Schema | ⚠️ Blocked (migration NOW RUN; icon squareness still open) | 2026-07-20 | **Migrations `0004_mobile_app_schema.sql` and `0005_task2_auth_profile.sql` were run for real against the live Supabase project on 2026-07-20**, using real credentials supplied in this session's `.env` (see Task 2's detailed status below for the full verification). `profiles`, `conduits`, `security_officers`, `link_codes`, `notifications`, `sponsors`, `entitlements`, and every other Task 1 table now genuinely exist. `country_config`'s 19 rows confirmed untouched, Nigeria's row confirmed correctly updated (`overwrite_fee_floor_local=100000`, `payment_provider=paystack`). The one remaining Task 1 item still open: the non-square logo / `expo-doctor` warning, unchanged, still deliberately not auto-fixed. |
 | 2 | Auth + Profile ID | 🟡 Substantively built & real-bug-tested; deliberately NOT marked ✅ — carried forward with one documented gap (see below) | 2026-07-20 | Brief: `Task-02-Auth-ProfileID.md` (v5) + `Task-02-Additions-Beyond-Spec.md` (everything built beyond the brief). See "Task 2 — Session Update 2026-07-20" and its "(final)" follow-up below for the full account. Google OAuth + Site URL are now resolved. **Only remaining gap: no SMS provider configured (phone auth) — dashboard-only, explicitly deferred as a founder product decision.** Per explicit instruction, moving to Task 3 now rather than continuing to chase Task 2 items in isolation — real bugs are expected to keep surfacing through actual cross-feature usage, same as this session. |
-| 3 | Conduit Creation + Invitation | 🔲 Ready — brief exists on `main`, not yet started | 2026-07-20 | Brief: `task_folder/Task-03-Conduit-Creation-Invitation.md` (pushed directly to `main` by the founder). **To be built on a new branch (#21) off `main`, after the founder merges branch #20 (`feature/task2-auth-profile-id`).** See `HANDOFF.md` for the exact sequence. |
+| 3 | Conduit Creation + Invitation | ⚠️ Blocked (built & real-bug-tested; one infra gap — see below) | 2026-07-20 | Built on branch #21 (`feature/task3-conduit-invitation`), off updated `main` (branch #20 confirmed merged first). All 9 screens + backend routes built and tested live against the real Supabase project with disposable test accounts. **Only unresolved item: the hourly expiry-sweep cron has no scheduler wired anywhere** — Railway was dropped project-wide, so `POST /v1/conduits/expire-drafts` exists and is verified working, but nothing calls it on a schedule yet. See "Task 3 — Session Update 2026-07-20" below for the full account. |
 | 4 | Paystack Payment + Entitlement Engine Core | ⬜ Not Started | — | — |
 | 5 | Security Officer System | ⬜ Not Started | — | — |
 | 6 | Gate Logging + Harvest Records | ⬜ Not Started | — | — |
@@ -322,3 +322,124 @@ Given the above, Task 2 is now **substantively complete** except for phone/SMS (
 **Task 2 status as of this update: 🟡 substantively built and real-bug-tested through extensive live usage this session, intentionally NOT marked ✅ Complete** (per this file's own rule — no task gets marked complete over an open, known gap) — carried forward as "known gaps documented, moving on" rather than "done." Phone/SMS is the only item that is a genuine dashboard blocker rather than something an agent could still fix in code.
 
 **Next task: Task 3 — Conduit Creation + Invitation.** Brief: `task_folder/Task-03-Conduit-Creation-Invitation.md` (pushed to `main` directly by the founder on 2026-07-20 — not yet present on this branch; pull it in via `git fetch origin main && git checkout origin/main -- task_folder/Task-03-Conduit-Creation-Invitation.md`, or just start Task 3 from a fresh branch off updated `main`, which will already have it). **Per explicit founder instruction: Task 3 is built on a brand-new branch (branch #21) off `main`, once the founder has merged branch #20 (`feature/task2-auth-profile-id`) into `main` themselves** — same pattern as Task 1→Task 2. Do not build Task 3 on this branch. See `HANDOFF.md` for the exact next-session sequence.
+
+
+
+## Task 3 — Session Update 2026-07-20 — Conduit Creation + Invitation built, real-bug-tested against live Supabase
+
+**Start of session state:** branch `feature/task3-conduit-invitation` (branch #21) already existed on `origin`, already off updated `main` (confirmed via `git merge-base --is-ancestor origin/main HEAD` — zero divergent commits, i.e. branch #20 was already merged). Picked up directly on that branch rather than creating a new one.
+
+**What was built (backend):**
+- `backend/src/services/conduitService.js` — Conduit ID generation (`CON-{country_code}-{6-digit sequence}`, country resolved dynamically via the same `resolveActiveCountryCode()` Task 2 already fixed for profiles — never hardcoded `"NG"`, per the brief's explicit warning), invitation expiry resolution (24h/7d/30d/never → absolute timestamp or null), side↔column mapping helpers (`land_owner`/`farm_operator` ↔ `land_owner_id`/`farm_operator_id`), expiry check helper.
+- `backend/src/routes/conduits.js` — full route set: `POST /v1/conduits` (create draft, combines Side Selection + Land Label in one call), `PATCH /v1/conduits/:id/land` (Edit affordance), `PATCH /v1/conduits/:id/boundary` (optional boundary capture, no Turf.js/sub-parcel logic), `POST /v1/conduits/:id/invitation` (generate/regenerate expiry + ID), `GET /v1/conduits/lookup/:conduitId` + `POST /v1/conduits/lookup/:conduitId/accept` (Accept Invitation's verify-then-commit pair, mirrors Task 2's Security Access shape), `GET /v1/conduits/:id` (Workspace, joins partner profile), `GET /v1/conduits/mine` (now real rows with partner join + `isAwaitingPartner`, supersedes the zero-state-only version that lived in `routes/home.js`), `POST /v1/conduits/expire-drafts` (the hourly sweep — see the open item below).
+- `backend/src/routes/home.js` — `pendingInvitationsCount` is now real (drafts the caller created that are still awaiting a partner), `pendingCount` now covers `draft`+`pending_payment`.
+- Wired into `backend/src/server.js`.
+
+**What was built (frontend) — 9 screens total, matching the brief's count:**
+- `app/conduit/side.tsx` (Side Selection), `land.tsx` (Land Label form — creates the draft row), `boundary.tsx` (4-method switcher: pin/coordinates/polygon/current-GPS, fully skippable), `expiry.tsx` (4-option picker with warnings on non-default), `generated.tsx` (Conduit ID + Copy/Share + live countdown), `accept.tsx` (Accept Invitation — lookup-then-accept), `edit-land.tsx` (Land Information's Edit affordance), `[id].tsx` (Conduit Workspace — minimal, honest "Coming in Task X" placeholders for Harvest Records/Invoices/Security/Trust Score/Satellite-Legal-Readiness/Activity Timeline, no fake data anywhere).
+- `app/home.tsx` and `app/conduits.tsx` upgraded from Task 2's zero-states to real data (Amendment 8 compliant — My Conduits stays a pure list, no stats/cards duplicated from Home). All three entry points (Create tab, Home's CTA, My Conduits' "Generate") now route to `/conduit/side`; "Enter ID" routes to `/conduit/accept`. `agrolease://conduit/{id}` deep link wired in `app/_layout.tsx`, same pattern as Task 2's `agrolease://link/{code}`.
+- Deleted `app/coming-soon/create.tsx` (fully superseded, zero remaining references).
+- Installed `expo-clipboard` (via `npx expo install`, SDK-54-compatible pinned version) for the Copy action — no other new dependencies needed (`react-native-maps`/`expo-location` were already installed since Task 1).
+
+**Real bugs found and fixed through live testing against the actual Supabase project (not just code review), same testing philosophy as Task 2's session:**
+1. **Accept Invitation incorrectly rejected a valid acceptance as "side already taken."** Root cause: when a Conduit's creator chooses the Farm Operator side, `land_owner_id` is NOT NULL on the schema, so it's temporarily set to the creator's own id as a placeholder until a real partner exists (documented in code). The accept route's "is this slot already taken by someone else" check didn't know about this placeholder and treated it as a real occupant. Fixed by explicitly detecting the placeholder case (`land_owner_id === farm_operator_id`) and allowing it to be overwritten.
+2. **Invitation regeneration was impossible for actually-expired invitations** — the exact case the brief requires it to handle ("Expired: ... one-tap regeneration available"). The route only allowed regeneration from `status = 'draft'`, but an expired Conduit's status is `'expired'`, not `'draft'`. Fixed by allowing regeneration from `'expired'` too, flipping status back to `'draft'` on regeneration. Added a visible "Regenerate Invitation" button on My Conduits' expired rows so this is actually reachable in the UI, not just callable via the API.
+
+**Verified live, end to end, using disposable Supabase Admin API test accounts (created and fully cleaned up afterward — no test data left in the live project):**
+- Draft creation (both Land Owner–side and Farm Operator–side creators) → correct `CON-NG-######` format, correct FK slot assignment.
+- Boundary capture (pin method) → correct `farm_boundary_type`/`farm_boundary_coords` persistence.
+- Invitation generation (7d and 24h settings) → correct absolute `invitation_expiry` timestamp.
+- Lookup as the invited partner before accepting → correct preview data, correctly rejects once expired.
+- Accept → correct opposite-side assignment for both creator-side cases (the bug above was caught and fixed here), status → `pending_payment`, double-accept correctly blocked, self-accept correctly blocked, notification written to the creator.
+- `/v1/conduits/mine` for both parties → correct partner join, correct `isAwaitingPartner` flag.
+- Conduit Workspace (`GET /v1/conduits/:id`) → correct header/partner/land data.
+- Land Information edit (`PATCH /v1/conduits/:id/land`) → persists correctly.
+- `/v1/home/summary` → all four counts (`myConduitsCount`, `pendingCount`, `recentActivityCount`, `pendingInvitationsCount`) confirmed correct against real data at each stage.
+- Expiry sweep (`POST /v1/conduits/expire-drafts`) → correctly identifies an overdue draft (tested via a manually backdated `invitation_expiry`), flips status to `expired`, writes a `conduit_invitation_expired` notification, returns an accurate count.
+- Regeneration of an expired invitation → correct fresh `CON-NG-######` (old one recycled/no longer resolves), status back to `draft`, fresh expiry.
+- `npx tsc --noEmit` → 0 errors (after regenerating a stale, pre-existing `.expo/types/router.d.ts` — same file, unrelated to this task, confirmed by reproducing the identical error on `main` before any Task 3 changes).
+- `npx expo export --platform web` → clean bundle, no errors, confirms every new screen/import (including `react-native-maps`/`expo-location`/`expo-clipboard` usage) resolves correctly.
+- Also found and removed one unrelated, pre-existing leftover test Conduit row (`CON-TEST-...`, from an earlier Task 2 session's Security Access testing) while cleaning up — not something this session created, flagged and removed since it was stale test data sitting in the live project.
+
+**Genuinely open item — infrastructure, not code:**
+- **The brief's "Hourly Railway cron" cannot literally be built as a Railway cron job** — Railway was dropped project-wide per `docs/CHANGE_LOG_PRODUCT_PLAN.md`, and this backend has been platform-agnostic (plain Node + Fastify + Dockerfile) since Task 1. `POST /v1/conduits/expire-drafts` exists, is fully implemented, and is verified working end-to-end (see above) — but **nothing calls it on a schedule anywhere in this repo or any deployed environment.** Wiring an actual scheduler (a hosted cron service, whatever platform eventually hosts this backend's own scheduled-job feature, or a self-hosted `node-cron` process alongside the server) is an infrastructure/deployment decision that depends on where this backend ultimately gets deployed — not yet decided anywhere in this repo's docs. Flagging this explicitly rather than silently assuming a scheduler exists. Draft Conduits will not auto-expire in production until this is resolved.
+
+**Not re-tested / out of scope for this task (correctly deferred, not overlooked):**
+- Polygon boundary capture's live map interaction (`react-native-maps`) was implemented as a simple multi-point coordinate-entry builder rather than an actual draggable map surface — matches the brief's own instruction to keep this "simple," not the full Spatial Conduit Engine (Task 12). Not tested on a real map view since no interactive map UI was built for this task, by design.
+- Full two-party invoice/payment flow that would move a Conduit from `pending_payment` to `active` — that's Task 4 (Paystack), not this task's concern; a Conduit correctly stops at `pending_payment` here.
+- Push notification delivery for any of this task's `createNotification()` calls — the rows are written correctly (verified), actual delivery is Task 10.
+
+**Task 3 status as of this update: 🟡 substantively built and real-bug-tested, NOT marked ✅ Complete** — carried forward with the hourly-scheduler gap explicitly documented as infrastructure, not a code deficiency. Every one of the brief's own checklist items that can be verified from this repo alone has been verified; the scheduler is the one item that requires a deployment decision outside this repo's current scope.
+
+**Next task: Task 4 — Paystack Payment + Entitlement Engine Core.** No brief exists yet for it in `task_folder/` as of this update.
+
+
+
+## Task 3 — Session Update 2026-07-21 — real production bugs found via live usage; My Conduits Edit/Delete added; Codespace networking made resilient
+
+**Start of session state:** Task 3 was built and pushed the previous session (see the entry directly above). This session picked up on the same branch, `feature/task3-conduit-invitation`, and was driven almost entirely by the founder actually using the app live and reporting real symptoms — not a code-review pass. Every fix below was root-caused against the live Supabase project and the actual running app, per this repo's established testing philosophy.
+
+### 1. Real bug found and fixed: dead Supabase session caused an infinite 401 loop with no recovery
+
+**Reported directly:** after attempting to link two Conduit accounts together, the app started failing every request with 401 ("failed to look up", "open the menu and tap refresh"), refresh did nothing, and even a full page reload didn't help. `supabase.auth.signOut()` itself started returning 403.
+
+**Root cause, confirmed:** `lib/apiClient.ts`'s `authHeaders()` called `supabase.auth.getSession()`, which — when the session's refresh token has been invalidated server-side (expired past its refresh window, or revoked) — keeps returning a stale, non-null session forever. It does not clear itself or throw. Every backend call then sent a dead access token, `requireAuth` correctly 401'd, but nothing client-side ever recognized "the session is actually dead now" — every screen just displayed the 401's error banner and told the user to refresh, which resent the identical dead token and 401'd again, forever, surviving a full reload since the dead session lives in browser storage, not memory. Supabase's own server-side `signOut()` call also rejects an already-invalid refresh token, which is why that returned 403 too — the user was genuinely stuck with no way back to Login from inside the app.
+
+**Fixed:** `lib/apiClient.ts`'s `parseResponse` now treats any 401 from *our* backend as "the session is dead" — calls `supabase.auth.signOut()` (ignoring its own error, since a session already invalid server-side has nothing left to revoke) and hard-redirects to `/login`, guarded by a module-level flag (`isHandlingSessionExpiry`) so it only fires once per detection, not once per failed request in flight.
+
+### 2. Real bug found and fixed: back button silently did nothing
+
+**Reported directly:** "the back button doesn't work anymore."
+
+**Root cause:** `components/ui/AppShell.tsx`'s back button called `router.back()` unconditionally. On web, Expo Router's `router.back()` silently no-ops when there's nothing in its own history stack to go back to (arriving via a deep link, a fresh page load on a pushed route, or the stack getting confused by a burst of failed/retried navigations during the 401 loop above) — a real, reproducible Expo Router web quirk, not a regression introduced by any specific change.
+
+**Fixed:** the back button now checks `router.canGoBack()` first and falls back to `router.replace('/home')` when there's nothing to go back to, so the tap always goes somewhere real instead of silently doing nothing.
+
+### 3. Codespaces port-forwarding made resilient — backend requests proxied through Metro's own already-public port
+
+**Reported directly:** repeated `net::ERR_FAILED` / CORS preflight failures hitting the backend's own forwarded URL (port 4055), even after manually setting that port to Public in the Ports panel — the manual visibility step kept not sticking, or wasn't visible in `gh codespace ports` output at all from inside the Codespace.
+
+**Root cause:** Codespaces requires the backend's own port to be forwarded AND manually set to Public after every single process restart — nothing persists this automatically, confirmed via repeated real attempts (`gh codespace ports visibility`, `code` CLI, manual Ports panel checks) that intermittently failed to register the port at all from inside this environment.
+
+**Fixed properly, not worked around: added `metro.config.js`** with a plain-Node (`http`, no new dependency) proxy middleware that forwards any `/v1/*` or `/health` request arriving at Metro's own dev server (port 8081, which only needs to be public once) straight through to the local backend on port 4055. `constants/config.ts`'s `resolveApiBaseUrl()` now points the web build at `window.location.origin` (Metro's own public URL) instead of a separate backend URL — native (iOS/Android) builds are completely unaffected and still use `EXPO_PUBLIC_API_BASE_URL` directly, since they never go through Metro's dev server at request time. **Only port 8081 needs to be public going forward** — port 4055 can stay private permanently.
+
+**Verified:** `https://<codespace>-8081.app.github.dev/health` and `/v1/home/summary` both return real backend responses (200 / 401-with-real-body respectively) through the single public port, confirmed via `curl` from both inside and outside the Codespace's own network.
+
+### 4. Real, unresolved-by-code issue: port visibility resets on Codespace restart; one browser-side 404 traced to a stale tunnel-auth session, not the app
+
+**Also reported this session:** after a Codespace restart, the app appeared "destroyed" (expected — nothing survives a restart in this environment, no process supervisor), and separately, a persistent `net::ERR_HTTP_RESPONSE_CODE_FAILURE 404` in the browser (both Chrome and Edge) even after every server-side check (local `curl`, external `curl`, headers, cache-busted requests, a full process kill+restart) came back a clean 200 from the exact same URL. The founder's own terminal `curl` against the same URL also returned fine.
+
+**Conclusion, not yet independently reproduced from this sandbox:** this pattern (server confirmed healthy from every angle including the founder's own terminal, but consistently 404 in-browser) is consistent with a stale/invalid GitHub Codespaces tunnel-relay authentication cookie in the browser session specifically, not a bug in this repo's code, the backend, or Metro. Recommended and not yet confirmed fixed: reopening the Codespace via `github.com/codespaces` directly (not a bookmarked/typed `.app.github.dev` URL) to force a fresh tunnel-auth session, then opening the forwarded port link from inside that fresh session. **Flagging honestly as unresolved** rather than claiming a fix that hasn't been confirmed working by the founder yet.
+
+### 5. My Conduits: hamburger menu removed, replaced with a per-row 3-dot Edit/Delete menu (explicit founder request, beyond the original Task 3 brief)
+
+**Not in Task 3's brief.** The brief only specifies My Conduits as "a pure list" (Amendment 8) with no per-row actions beyond tapping through to the Workspace.
+
+**What was built:**
+- `AppShell`'s hamburger menu is now hidden specifically on My Conduits (`hideMenu` prop) — every other screen keeps it unchanged.
+- Each conduit row now has its own `⋮` (3-dot) button opening a small menu with **Edit Conduit** and **Delete Conduit**.
+- **Edit Conduit** opens a new combined screen, `app/conduit/edit.tsx` — lets a party change Land Information, Farm Boundary, and (only while still `draft`) Invitation Expiry, all from one place, reusing the exact same backend routes the creation flow itself uses (`PATCH .../land`, `PATCH .../boundary`, `POST .../invitation`) — no new backend logic, just a different front-end entry point onto existing operations.
+- **Delete Conduit** confirms, then calls a new `DELETE /v1/conduits/:id` backend route (added this session) — a hard delete, since a Conduit this early in its lifecycle (draft/pending_payment, before any harvest records/invoices/security officers exist against it) has nothing else referencing it yet.
+
+**Verified live** against the real Supabase project using a disposable Admin API test account (created and cleaned up after, per this repo's established testing convention): land/boundary/invitation-expiry edits all persist correctly through the new combined screen's underlying calls; delete removes the row from `/v1/conduits/mine` and correctly 404s on a repeat delete attempt.
+
+**One test account could not be fully cleaned up this session** — `task3-editdel-...@example.com` (auth-only, no profile, no conduits, all real data already removed) returned a persistent `AuthRetryableFetchError`/500 from Supabase's Admin API on `deleteUser` across three retry attempts. Harmless (nothing references it), but flagged honestly rather than silently left undocumented — worth a retry in a future session or a manual dashboard delete.
+
+### 6. Combined dev-start script added (`npm run dev`)
+
+**Not in Task 3's brief — pure developer-experience tooling, explicit founder request** after repeated confusion from needing to separately start the backend and Metro after every Codespace restart.
+
+**What was built:** `scripts/dev-all.js` — a plain Node `child_process` script (no new dependency, e.g. `concurrently`, added just for this) that starts both `backend/src/server.js` and `npx expo start --web` together, with `[backend]`/`[expo]` prefixed, colored output, and Ctrl+C stopping both. Wired as `npm run dev` in the root `package.json`.
+
+**Verified:** confirmed the script boots both processes correctly, backend responds on `/health`, Metro's proxy (item 3 above) correctly reaches it.
+
+### What remains open, carried forward unchanged from the previous session
+
+Same as documented in the entry directly above this one — the hourly expiry-sweep scheduler still has no cron/scheduler infrastructure wired anywhere (the callable endpoint itself is fully verified working), and Task 2's one dashboard-only gap (no SMS provider) is unchanged.
+
+**New genuinely open items from this session:**
+1. Item 4 above — the browser-side 404 pattern is diagnosed as a likely stale tunnel-auth cookie, but not yet confirmed fixed by the founder reopening the Codespace fresh via `github.com/codespaces`. If it recurs after that, this needs further investigation, not a repeat of the same server-side checks (which have already been exhausted and all came back clean).
+2. Codespace port visibility resetting on every restart remains a genuine environmental limitation of this sandbox, not something fixable from application code — `npm run dev` (item 6) reduces this to "one command to restart both processes," but the Ports panel visibility step for port 8081 still needs a human after every restart.
+3. See `task_folder/Task-03-Additions-Beyond-Spec.md` (new this session) for the full, itemized list of everything built beyond Task 3's original brief, so a future task doesn't re-specify or rebuild any of it.
+
+**Task 3 status unchanged: 🟡 substantively built and real-bug-tested, NOT marked ✅ Complete** — carried forward with the same infra gap as before (scheduler), plus the newly-documented, not-yet-confirmed-resolved browser tunnel-auth issue (item 4). Everything else reported this session was root-caused, fixed, and verified against the live backend/database.

@@ -34,6 +34,15 @@ export default function RootLayout() {
         router.push({ pathname: '/security/access', params: { code: path } });
         return;
       }
+      // agrolease://conduit/{id} - Task 3, Step 7's Accept Invitation
+      // deep link. Same parsing shape as the link-code deep link above:
+      // hostname="conduit", path="{conduitId}". Lands on Accept
+      // Invitation with the Conduit ID pre-filled/looked-up, same
+      // pattern as Security Access's own code param.
+      if (hostname === 'conduit' && path) {
+        router.push({ pathname: '/conduit/accept', params: { conduitId: path } });
+        return;
+      }
       // Any other agrolease:// redirect (Google OAuth, email recovery
       // magic link) just needs the app foregrounded - Supabase's own
       // client picks up the session from the URL fragment automatically
@@ -60,6 +69,15 @@ export default function RootLayout() {
         <Stack.Screen name="welcome" />
         <Stack.Screen name="home" />
         <Stack.Screen name="conduits" />
+        <Stack.Screen name="conduit/side" />
+        <Stack.Screen name="conduit/land" />
+        <Stack.Screen name="conduit/boundary" />
+        <Stack.Screen name="conduit/expiry" />
+        <Stack.Screen name="conduit/generated" />
+        <Stack.Screen name="conduit/accept" />
+        <Stack.Screen name="conduit/edit-land" />
+        <Stack.Screen name="conduit/edit" />
+        <Stack.Screen name="conduit/[id]" />
         <Stack.Screen name="recent-activity" />
         <Stack.Screen name="profile/index" />
         <Stack.Screen name="profile/edit" />
@@ -69,7 +87,6 @@ export default function RootLayout() {
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="reset-verification" />
         <Stack.Screen name="new-password" />
-        <Stack.Screen name="coming-soon/create" />
         <Stack.Screen name="coming-soon/messages" />
         <Stack.Screen name="coming-soon/browse-listings" />
         <Stack.Screen name="coming-soon/link-security" />

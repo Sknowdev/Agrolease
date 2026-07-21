@@ -5,6 +5,7 @@ import cors from '@fastify/cors';
 import dotenv from 'dotenv';
 import Fastify from 'fastify';
 
+import conduitsRoute from './routes/conduits.js';
 import healthRoute from './routes/health.js';
 import homeRoute from './routes/home.js';
 import profilesRoute from './routes/profiles.js';
@@ -55,6 +56,8 @@ function buildServer() {
   app.register(profilesRoute);
   app.register(securityRoute);
   app.register(homeRoute);
+  // Task 3 - Conduit Creation + Invitation.
+  app.register(conduitsRoute);
   return app;
 }
 

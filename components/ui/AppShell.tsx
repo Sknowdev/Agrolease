@@ -142,7 +142,21 @@ export function AppShell({
         <View style={styles.headerRow}>
           {showBackButton ? (
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => {
+                // router.back() silently no-ops on web when Expo
+                // Router's history stack has nothing to go back to
+                // (e.g. arriving via a deep link, a fresh page load on
+                // a pushed route, or after the navigation stack got
+                // confused by a burst of failed/retried screens) - a
+                // back button that does nothing when tapped was
+                // reported directly as broken. Falling back to Home
+                // guarantees the tap always goes somewhere real.
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/home');
+                }
+              }}
               style={styles.avatarCircle}
               hitSlop={8}
               accessibilityLabel="Back"
