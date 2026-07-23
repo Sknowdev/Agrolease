@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '../../components/ui/AppShell';
 import { Button } from '../../components/ui/Button';
 import { TextField } from '../../components/ui/TextField';
 import { Colors, Radius, Spacing } from '../../constants/colors';
 import { apiPatch } from '../../lib/apiClient';
+import { confirmAction } from '../../lib/confirm';
 
 type Method = 'pin' | 'coords' | 'polygon' | 'gps';
 
@@ -201,10 +202,12 @@ export default function ConduitBoundary() {
 
       <Pressable
         onPress={() =>
-          Alert.alert('Skip Farm Boundary?', 'You can add this later from the Conduit.', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Skip', onPress: handleSkip },
-          ])
+          confirmAction(
+            'Skip Farm Boundary?',
+            'You can add this later from the Conduit.',
+            handleSkip,
+            { confirmLabel: 'Skip', destructive: false }
+          )
         }
         style={styles.skipRow}
       >

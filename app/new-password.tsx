@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { AuthShell } from '../components/ui/AuthShell';
 import { Button } from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
+import { notify } from '../lib/confirm';
 import { supabase } from '../lib/supabaseClient';
 
 /**
@@ -33,7 +34,7 @@ export default function NewPassword() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
-        Alert.alert('Could not update password', error.message);
+        notify('Could not update password', error.message);
         return;
       }
       await supabase.auth.signOut();

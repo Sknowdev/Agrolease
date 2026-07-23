@@ -1,11 +1,11 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
 
 import { AppShell } from '../../components/ui/AppShell';
 import { Button } from '../../components/ui/Button';
 import { TextField } from '../../components/ui/TextField';
 import { apiGet, apiPatch } from '../../lib/apiClient';
+import { notify } from '../../lib/confirm';
 
 type Profile = {
   display_name: string | null;
@@ -45,7 +45,7 @@ export default function EditProfile() {
           setPhone(profile.phone ?? '');
         })
         .catch((err) => {
-          Alert.alert(
+          notify(
             'Could not load your profile',
             err instanceof Error ? err.message : 'Please go back and try again.'
           );
@@ -60,7 +60,7 @@ export default function EditProfile() {
       await apiPatch('/v1/profiles/me', { displayName, phone });
       router.back();
     } catch (err) {
-      Alert.alert('Could not save changes', err instanceof Error ? err.message : 'Please try again.');
+      notify('Could not save changes', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setIsSaving(false);
     }

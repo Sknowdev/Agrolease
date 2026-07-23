@@ -62,6 +62,51 @@ export async function generateUniqueProfileId() {
  */
 const PROFILE_ID_FORMAT = /^[a-zA-Z0-9_]{3,20}$/;
 
+/**
+ * Read-only check: is this Profile ID valid and available? Used by
+ * both the live-as-you-type availability check (Task 3 addition,
+ * GET /v1/profiles/check-id) and the actual save path below - shared
+ * so the two never drift out of sync with each other. Never mutates
+ * anything; the live check calling this repeatedly as a user types is
+ * always safe.
+ *
+ * Returns { available: boolean, reason?: string } instead of throwing,
+ * since "not available" is an expected, normal outcome for a live
+ * check (not an error condition) - unlike validateAndReserveProfileId
+ * below, which is the actual save path and DOES throw on invalid/taken.
+ */
+export async function checkProfileIdAvailability(profileId, currentProfileDbId) {
+  if (!profileId || !PROFILE_ID_FORMAT.test(profileId)) {
+    return { available: false, reason: 'Must be 3-20 characters: letters, numbers, and underscores only.' };
+  }
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .ilike('profile_id', profileId)
+    .maybeSingle();
+
+  if (error) {
+    throw new ApiError(500, 'profile_id_lookup_failed', 'Could not verify Profile ID uniqueness.');
+  }
+  if (data && data.id !== currentProfileDbId) {
+    return { available: false, reason: 'That Profile ID is already in use.' };
+  }
+
+  return { available: true };
+}
+
+/**
+ * Validates a user-supplied Profile ID for the Profile screen's inline
+ * edit: a free-form unique username, not the `user####` auto-generated
+ * format alone - per explicit instruction, a user should be able to
+ * pick any handle they want (e.g. "johndoe", "farmking"), not be forced
+ * to include a number. Still constrained to a safe, URL/display-safe
+ * charset and a sane length, checked case-insensitively for uniqueness
+ * against every other profile (not just an exact match) - same
+ * mechanism as before, just a looser format.
+ */
 export async function validateAndReserveProfileId(profileId, currentProfileDbId) {
   if (!PROFILE_ID_FORMAT.test(profileId)) {
     throw new ApiError(

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Spacing } from '../constants/colors';
@@ -35,8 +35,37 @@ import { useAuth } from '../hooks/useAuth';
 export default function Splash() {
   const { session, isLoading, lastAuthEvent } = useAuth();
 
+  /**
+   * Real bug fix (found live): Splash (this screen) sits at the root
+   * of the Stack and never unmounts - Expo Router keeps every visited
+   * screen mounted, this one included. Supabase's client refreshes the
+   * access token periodically in the background (`autoRefreshToken:
+   * true`, see lib/supabaseClient.ts) and fires a real
+   * `onAuthStateChange` event (`TOKEN_REFRESHED`) each time, with a
+   * NEW session object reference even though the logged-in user hasn't
+   * actually changed. Before this fix, this effect's dependency array
+   * (`[isLoading, session, lastAuthEvent]`) re-ran on every one of
+   * those background refreshes and called `router.replace('/home')`
+   * again - from wherever the user currently was navigated to, not
+   * just from Splash. `router.replace` overwrites the current history
+   * entry, which silently wiped out whatever "came from Home" stack
+   * entry a pushed screen (e.g. My Profile) was relying on for its own
+   * back button - reported directly as "the back button doesn't work"
+   * on screens reached via push, intermittently, exactly matching a
+   * background-refresh timing pattern rather than a real navigation
+   * bug in AppShell's own canGoBack()/back() logic (which is correct).
+   *
+   * Fix: the routing decision only runs ONCE, the first time isLoading
+   * resolves to false - a `hasRoutedRef` guard skips every subsequent
+   * re-run of this effect, including ones triggered by a background
+   * token refresh long after the user has already navigated elsewhere.
+   */
+  const hasRoutedRef = useRef(false);
+
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || hasRoutedRef.current) return;
+    hasRoutedRef.current = true;
+
     if (!session) {
       router.replace('/login');
       return;

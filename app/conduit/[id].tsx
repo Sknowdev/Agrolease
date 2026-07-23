@@ -1,13 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '../../components/ui/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Colors, Radius, Spacing } from '../../constants/colors';
 import { apiGet } from '../../lib/apiClient';
+import { notify } from '../../lib/confirm';
 
 type Conduit = {
   id: string;
@@ -42,17 +43,45 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 /**
- * Conduit Workspace - minimal version (Task 3, Step 10).
+ * Conduit Workspace (Task 3, Step 10 - redesigned per explicit
+ * follow-up instruction against the real reference image,
+ * app_refrence.png/IMG_1365.jpeg, which was the actual Conduit
+ * dashboard mockup - the images looked at earlier in this task were
+ * confirmed NOT to be it, so nothing here was guessed).
  *
- * Per Amendment 8, this is the per-relationship dashboard - NOT a
- * repeat of Home's aggregate stats or My Conduits' list. This task's
- * own scope is deliberately narrow: header, partner info, Land
- * Information card with a plain Edit affordance (not the full
- * Conduit Settings `⋮` menu - Amendment 9 explicitly defers that until
- * enough of it has real content behind it), and honest "Coming in
- * Task X" placeholders for Harvest Records, Invoices, Security, Trust
- * Score, Satellite/Legal Readiness, and Activity Timeline - no fake
- * data or invented zero-states for any of them.
+ * Matches IMG_1365.jpeg's structure exactly:
+ *   - Dark green header: Conduit ID + status badge (unchanged from
+ *     the original build).
+ *   - Partner card: partner name + Trust Score bar + a row of 5 icon
+ *     shortcuts (Message, Add Record, Agreement, Land, Security).
+ *   - Six colored, icon-chip cards in a 2-up grid: Land Information,
+ *     Live Commodity Price, Harvest Records, Invoice, Security
+ *     Information, and Add-on (the reference's card literally reads
+ *     "Additional Activation" - renamed to "Add-on" here per explicit
+ *     instruction: "please don't use the name additional activation
+ *     instead call it add-on").
+ *   - Activity Timeline as its own full-width card at the bottom.
+ *
+ * What's real vs. placeholder, and why (no invented data anywhere):
+ *   - Land Information is the only card backed by real data today
+ *     (conduit.land_size_hectares/land_location, same as before).
+ *   - Live Commodity Price stays a "Coming soon" state, identical to
+ *     Home's card - per the Engineering Constitution, the mobile app
+ *     never calls a prices API directly, and Home already established
+ *     this exact pattern.
+ *   - Harvest Records, Invoice, Security Information, and Trust Score
+ *     have NO backing backend route yet (no harvest_records/invoices/
+ *     security_officers/trust_scores read endpoint exists for this
+ *     Conduit - confirmed by reading backend/src/routes/conduits.js).
+ *     They show an honest zero-state ("No records yet" etc.), not a
+ *     fake count, and route to the same kind of Coming Soon stub Home
+ *     already uses for deferred features.
+ *   - Add-on's two rows (Satellite & Weather, Legal Readiness) mirror
+ *     the reference's own "Inactive" + disabled-looking "Activate"
+ *     presentation - tapping either opens a Coming Soon stub rather
+ *     than pretending to activate something with no backend behind it.
+ *   - Activity Timeline is an honest empty state - no activity-log
+ *     table/route exists yet.
  */
 export default function ConduitWorkspace() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -80,7 +109,7 @@ export default function ConduitWorkspace() {
   async function handleCopyId() {
     if (!conduit) return;
     await Clipboard.setStringAsync(conduit.conduit_id);
-    Alert.alert('Copied', 'Conduit ID copied to clipboard.');
+    notify('Copied', 'Conduit ID copied to clipboard.');
   }
 
   function handleEditLand() {
@@ -131,40 +160,136 @@ export default function ConduitWorkspace() {
           </Card>
 
           <Card>
-            <Text style={styles.sectionTitle}>Partner</Text>
-            {partner ? (
-              <View style={styles.partnerRow}>
-                <View style={styles.partnerAvatar}>
-                  <Ionicons name="person" size={18} color={Colors.accentDark} />
-                </View>
-                <View>
-                  <Text style={styles.partnerName}>{partner.display_name ?? partner.profile_id}</Text>
-                  <Text style={styles.partnerMeta}>@{partner.profile_id}</Text>
-                </View>
+            <View style={styles.partnerTopRow}>
+              <View style={styles.partnerAvatar}>
+                <Ionicons name="person" size={20} color={Colors.accentDark} />
               </View>
-            ) : (
-              <Text style={styles.mutedText}>Awaiting partner</Text>
-            )}
+              <View style={styles.partnerNameBlock}>
+                <Text style={styles.partnerRoleLabel}>Partner</Text>
+                <Text style={styles.partnerName} numberOfLines={1}>
+                  {partner ? partner.display_name ?? partner.profile_id : 'Awaiting partner'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.trustScoreBlock}>
+              <View style={styles.trustScoreLabelRow}>
+                <Text style={styles.trustScoreLabel}>Trust Score</Text>
+                <Text style={styles.trustScoreValueMuted}>Not yet available</Text>
+              </View>
+              <View style={styles.trustScoreBarTrack}>
+                <View style={styles.trustScoreBarFill} />
+              </View>
+            </View>
+
+            <View style={styles.shortcutIconsRow}>
+              <ShortcutIcon
+                icon={<Ionicons name="chatbubble-outline" size={18} color={Colors.accentDark} />}
+                label="Message"
+                onPress={() => router.push('/coming-soon/messages')}
+              />
+              <ShortcutIcon
+                icon={<Ionicons name="add-outline" size={18} color={Colors.accentDark} />}
+                label="Add Record"
+                onPress={() => router.push('/coming-soon/add-record')}
+              />
+              <ShortcutIcon
+                icon={<Ionicons name="document-text-outline" size={18} color={Colors.accentDark} />}
+                label="Agreement"
+                onPress={() => router.push('/coming-soon/agreement')}
+              />
+              <ShortcutIcon
+                icon={<Ionicons name="globe-outline" size={18} color={Colors.accentDark} />}
+                label="Land"
+                onPress={handleEditLand}
+              />
+              <ShortcutIcon
+                icon={<Ionicons name="shield-outline" size={18} color={Colors.accentDark} />}
+                label="Security"
+                onPress={() => router.push('/coming-soon/link-security')}
+              />
+            </View>
           </Card>
+
+          <View style={styles.cardGrid}>
+            <DashboardCard
+              style={styles.gridCard}
+              iconBg="#E4F3E8"
+              icon={<MaterialCommunityIcons name="sprout-outline" size={18} color={Colors.accentDark} />}
+              title="Land Information"
+              onPress={handleEditLand}
+            >
+              <Text style={styles.cardBigValue}>
+                {conduit.land_size_hectares ? `${conduit.land_size_hectares} ha` : '-'}
+              </Text>
+              <Text style={styles.cardSmallMeta} numberOfLines={1}>
+                {conduit.land_location ?? 'No location set'}
+              </Text>
+            </DashboardCard>
+
+            <DashboardCard
+              style={styles.gridCard}
+              iconBg="#FBEADB"
+              icon={<Ionicons name="trending-up" size={18} color="#D98A2B" />}
+              title="Live Commodity Price"
+            >
+              <Text style={styles.cardComingSoon}>Coming soon</Text>
+              <Text style={styles.cardSmallMeta}>Real-time prices are on the way.</Text>
+            </DashboardCard>
+
+            <DashboardCard
+              style={styles.gridCard}
+              iconBg="#E3EEFB"
+              icon={<Ionicons name="cube-outline" size={18} color="#3B78C4" />}
+              title="Harvest Records"
+              onPress={() => router.push('/coming-soon/add-record')}
+            >
+              <Text style={styles.cardBigValue}>0</Text>
+              <Text style={styles.cardSmallMeta}>No records yet</Text>
+            </DashboardCard>
+
+            <DashboardCard
+              style={styles.gridCard}
+              iconBg="#EDE6F7"
+              icon={<Ionicons name="document-text-outline" size={18} color="#7B5AC2" />}
+              title="Invoice"
+              onPress={() => router.push('/coming-soon/agreement')}
+            >
+              <Text style={styles.cardBigValue}>0</Text>
+              <Text style={styles.cardSmallMeta}>No pending invoices</Text>
+            </DashboardCard>
+
+            <DashboardCard
+              style={styles.gridCard}
+              iconBg="#E4F3E8"
+              icon={<Ionicons name="shield-checkmark-outline" size={18} color={Colors.accentDark} />}
+              title="Security Information"
+              onPress={() => router.push('/coming-soon/link-security')}
+            >
+              <Text style={styles.cardBigValue}>0</Text>
+              <Text style={styles.cardSmallMeta}>No guards linked</Text>
+            </DashboardCard>
+
+            <DashboardCard
+              style={styles.gridCard}
+              iconBg="#FBEADB"
+              icon={<Ionicons name="extension-puzzle-outline" size={18} color="#D98A2B" />}
+              title="Add-on"
+            >
+              <AddOnRow label="Satellite & Weather" />
+              <AddOnRow label="Legal Readiness" />
+            </DashboardCard>
+          </View>
 
           <Card>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Land Information</Text>
-              <Text style={styles.editLink} onPress={handleEditLand} suppressHighlighting>
-                Edit
-              </Text>
+            <View style={styles.timelineHeaderRow}>
+              <View style={styles.sectionHeaderIconRow}>
+                <Ionicons name="time-outline" size={16} color={Colors.text} />
+                <Text style={styles.sectionTitle}>Activity Timeline</Text>
+              </View>
             </View>
-            <InfoRow label="Land Name" value={conduit.land_name ?? '-'} />
-            <InfoRow label="Size" value={conduit.land_size_hectares ? `${conduit.land_size_hectares} ha` : '-'} />
-            <InfoRow label="Location" value={conduit.land_location ?? '-'} />
+            <Text style={styles.mutedText}>No activity yet</Text>
           </Card>
-
-          <PlaceholderCard title="Harvest Records" note="Coming in Task 6" icon="cube-outline" />
-          <PlaceholderCard title="Invoices" note="Coming in Task 7" icon="document-text-outline" />
-          <PlaceholderCard title="Security" note="Coming in Task 5" icon="shield-checkmark-outline" />
-          <PlaceholderCard title="Trust Score" note="Coming in Task 9" icon="ribbon-outline" />
-          <PlaceholderCard title="Satellite / Legal Readiness" note="Coming in Task 13 / 16" icon="planet-outline" />
-          <PlaceholderCard title="Activity Timeline" note="Coming in Task 6+" icon="time-outline" />
         </>
       ) : !loadError ? (
         <Text style={styles.mutedText}>Loading...</Text>
@@ -173,34 +298,60 @@ export default function ConduitWorkspace() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function ShortcutIcon({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
   return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
+    <Pressable style={styles.shortcutIconItem} onPress={onPress}>
+      <View style={styles.shortcutIconCircle}>{icon}</View>
+      <Text style={styles.shortcutIconLabel} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
-function PlaceholderCard({
-  title,
-  note,
+function DashboardCard({
+  style,
+  iconBg,
   icon,
+  title,
+  onPress,
+  children,
 }: {
+  style?: object;
+  iconBg: string;
+  icon: React.ReactNode;
   title: string;
-  note: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  onPress?: () => void;
+  children: React.ReactNode;
 }) {
-  return (
-    <Card style={styles.placeholderCard}>
-      <View style={styles.placeholderIconCircle}>
-        <Ionicons name={icon} size={18} color={Colors.muted} />
-      </View>
-      <View style={styles.placeholderTextBlock}>
-        <Text style={styles.placeholderTitle}>{title}</Text>
-        <Text style={styles.placeholderNote}>{note}</Text>
-      </View>
+  const content = (
+    <Card style={style}>
+      <View style={[styles.dashCardIconCircle, { backgroundColor: iconBg }]}>{icon}</View>
+      <Text style={styles.dashCardTitle}>{title}</Text>
+      {children}
     </Card>
+  );
+
+  if (onPress) {
+    return <Pressable onPress={onPress}>{content}</Pressable>;
+  }
+  return content;
+}
+
+function AddOnRow({ label }: { label: string }) {
+  return (
+    <View style={styles.addOnRow}>
+      <View style={styles.addOnTextBlock}>
+        <Text style={styles.addOnLabel}>{label}</Text>
+        <Text style={styles.addOnStatus}>Inactive</Text>
+      </View>
+      <Pressable
+        style={styles.addOnButton}
+        onPress={() => router.push('/coming-soon/add-record')}
+      >
+        <Text style={styles.addOnButtonText}>Activate</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -259,84 +410,172 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: Spacing.sm,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  editLink: {
-    color: Colors.accentDark,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  partnerRow: {
+  sectionHeaderIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  partnerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E4F3E8',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  partnerName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  partnerMeta: {
-    fontSize: 12,
-    color: Colors.muted,
+    gap: Spacing.xs,
   },
   mutedText: {
     fontSize: 13,
     color: Colors.muted,
   },
-  infoRow: {
+  // Partner card
+  partnerTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  infoLabel: {
-    fontSize: 13,
+  partnerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E4F3E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  partnerNameBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  partnerRoleLabel: {
+    fontSize: 12,
     color: Colors.muted,
   },
-  infoValue: {
+  partnerName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.text,
+    marginTop: 1,
+  },
+  trustScoreBlock: {
+    marginTop: Spacing.md,
+  },
+  trustScoreLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  trustScoreLabel: {
     fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
   },
-  placeholderCard: {
+  trustScoreValueMuted: {
+    fontSize: 12,
+    color: Colors.muted,
+  },
+  trustScoreBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.border,
+    overflow: 'hidden',
+  },
+  trustScoreBarFill: {
+    height: '100%',
+    width: 0,
+    backgroundColor: Colors.accentDark,
+    borderRadius: 3,
+  },
+  shortcutIconsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    opacity: 0.75,
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
   },
-  placeholderIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surface,
+  shortcutIconItem: {
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  placeholderTextBlock: {
+    gap: 6,
     flex: 1,
     minWidth: 0,
   },
-  placeholderTitle: {
-    fontSize: 14,
+  shortcutIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E4F3E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortcutIconLabel: {
+    fontSize: 10,
+    color: Colors.muted,
+    textAlign: 'center',
+  },
+  // 2-up card grid
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  gridCard: {
+    flexBasis: '47%',
+    flexGrow: 1,
+  },
+  dashCardIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  dashCardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: 6,
+  },
+  cardBigValue: {
+    fontSize: 22,
     fontWeight: '700',
     color: Colors.text,
   },
-  placeholderNote: {
-    fontSize: 12,
+  cardSmallMeta: {
+    fontSize: 11,
     color: Colors.muted,
     marginTop: 2,
+  },
+  cardComingSoon: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.muted,
+  },
+  // Add-on card
+  addOnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  addOnTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  addOnLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  addOnStatus: {
+    fontSize: 10,
+    color: Colors.muted,
+    marginTop: 1,
+  },
+  addOnButton: {
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.accentDark,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+  },
+  addOnButtonText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.accentDark,
+  },
+  // Activity timeline
+  timelineHeaderRow: {
+    marginBottom: Spacing.sm,
   },
 });

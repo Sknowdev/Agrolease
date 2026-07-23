@@ -118,7 +118,14 @@ export async function apiPost<T>(
   const headers = opts.authenticated === false ? {} : await authHeaders();
   const res = await fetch(`${Config.apiBaseUrl}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
+    // Real bug fix (found live): Fastify's own JSON body parser rejects
+    // a request with `Content-Type: application/json` set but a
+    // genuinely empty body (`FST_ERR_CTP_EMPTY_JSON_BODY`, a 400) - this
+    // broke Accept Invitation's POST .../accept call, which correctly
+    // has no body to send but was still getting the JSON Content-Type
+    // header unconditionally. Only set Content-Type (and therefore only
+    // send a body) when a body argument was actually passed.
+    headers: body !== undefined ? { 'Content-Type': 'application/json', ...headers } : headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   return parseResponse<T>(res);

@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { AuthShell } from '../../components/ui/AuthShell';
 import { Button } from '../../components/ui/Button';
 import { TextField } from '../../components/ui/TextField';
 import { Colors, Radius, Spacing } from '../../constants/colors';
 import { apiGet } from '../../lib/apiClient';
+import { notify } from '../../lib/confirm';
 
 /**
  * Security Access - entry screen (Task 2, Step 10).
@@ -58,7 +59,7 @@ export default function SecurityAccess() {
     // exists and both paths are reachable) - full scan-to-code wiring
     // is deferred to whichever task builds the camera flow for real
     // (expo-camera is already installed per Task 1, unused so far).
-    Alert.alert('Scan Access QR Code', 'QR scanning will be available soon. Enter your code manually for now.');
+    notify('Scan Access QR Code', 'QR scanning will be available soon. Enter your code manually for now.');
   }
 
   return (

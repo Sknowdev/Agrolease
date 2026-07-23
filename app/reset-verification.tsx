@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { AuthShell } from '../components/ui/AuthShell';
 import { Button } from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
+import { notify } from '../lib/confirm';
 import { supabase } from '../lib/supabaseClient';
 
 /**
@@ -46,7 +47,7 @@ export default function ResetVerification() {
           type: 'recovery',
         });
         if (verifyError) {
-          Alert.alert('Invalid code', verifyError.message);
+          notify('Invalid code', verifyError.message);
           return;
         }
       } else {
@@ -56,7 +57,7 @@ export default function ResetVerification() {
           type: 'sms',
         });
         if (verifyError) {
-          Alert.alert('Invalid code', verifyError.message);
+          notify('Invalid code', verifyError.message);
           return;
         }
       }

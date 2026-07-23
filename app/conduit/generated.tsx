@@ -2,13 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Share, StyleSheet, Text, View } from 'react-native';
+import { Share, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '../../components/ui/AppShell';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Colors, Radius, Spacing } from '../../constants/colors';
 import { apiGet } from '../../lib/apiClient';
+import { notify } from '../../lib/confirm';
 
 type Conduit = {
   id: string;
@@ -71,7 +72,7 @@ export default function ConduitGenerated() {
   async function handleCopy() {
     if (!conduit) return;
     await Clipboard.setStringAsync(conduit.conduit_id);
-    Alert.alert('Copied', 'Conduit ID copied to clipboard.');
+    notify('Copied', 'Conduit ID copied to clipboard.');
   }
 
   async function handleShare() {

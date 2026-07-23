@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppShell } from '../../components/ui/AppShell';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { TextField } from '../../components/ui/TextField';
 import { Colors, Spacing } from '../../constants/colors';
 import { apiGet, apiPatch } from '../../lib/apiClient';
+import { notify } from '../../lib/confirm';
 
 type Profile = {
   profile_id: string;
@@ -49,6 +50,23 @@ export default function ProfileView() {
   const [idError, setIdError] = useState<string | undefined>();
   const [isSavingId, setIsSavingId] = useState(false);
 
+  /**
+   * Live availability check (Task 3 addition, explicit founder
+   * request: "auto check database immediately user type a letter... so
+   * they can know the users name has been taken before they hit
+   * save"). Debounced 400ms after the last keystroke, calling the new
+   * read-only GET /v1/profiles/check-id - never reserves anything, so
+   * calling it repeatedly while typing is always safe. `checkedValue`
+   * guards against a slow response for an OLDER value overwriting the
+   * result for whatever the user has since typed (a real race that
+   * would otherwise show a stale/wrong availability state).
+   */
+  const [availability, setAvailability] = useState<{ checking: boolean; available: boolean | null; reason?: string }>(
+    { checking: false, available: null }
+  );
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checkedValueRef = useRef<string>('');
+
   const loadProfile = useCallback(() => {
     setLoadError(undefined);
     return apiGet<{ profile: Profile }>('/v1/profiles/me')
@@ -68,6 +86,45 @@ export default function ProfileView() {
     }, [loadProfile])
   );
 
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!isEditingId) {
+      setAvailability({ checking: false, available: null });
+      return;
+    }
+    // Unchanged from the current saved value - nothing to check, and
+    // definitely not "taken" (it's the user's own current id).
+    if (!editedId.trim() || editedId.trim() === profile?.profile_id) {
+      setAvailability({ checking: false, available: null });
+      return;
+    }
+
+    setAvailability({ checking: true, available: null });
+    debounceRef.current = setTimeout(() => {
+      const value = editedId.trim();
+      apiGet<{ available: boolean; reason?: string }>(`/v1/profiles/check-id?profileId=${encodeURIComponent(value)}`)
+        .then((result) => {
+          checkedValueRef.current = value;
+          // Only apply this result if it's still the current value -
+          // a slower, earlier request resolving after a newer one
+          // would otherwise show a stale availability state.
+          if (editedId.trim() === value) {
+            setAvailability({ checking: false, available: result.available, reason: result.reason });
+          }
+        })
+        .catch(() => {
+          if (editedId.trim() === value) {
+            setAvailability({ checking: false, available: null });
+          }
+        });
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [editedId, isEditingId, profile?.profile_id]);
+
   function startEditingId() {
     setEditedId(profile?.profile_id ?? '');
     setIdError(undefined);
@@ -78,11 +135,16 @@ export default function ProfileView() {
     setIsEditingId(false);
     setIdError(undefined);
     setEditedId(profile?.profile_id ?? '');
+    setAvailability({ checking: false, available: null });
   }
 
   async function handleSaveProfileId() {
     if (!editedId.trim() || editedId.trim() === profile?.profile_id) {
       setIsEditingId(false);
+      return;
+    }
+    if (availability.available === false) {
+      setIdError(availability.reason ?? 'That Profile ID is not available.');
       return;
     }
     setIsSavingId(true);
@@ -107,7 +169,7 @@ export default function ProfileView() {
     // not a dead circle. Wiring a real upload needs a Supabase Storage
     // bucket + signed-URL flow the Constitution requires for any file
     // upload, which isn't part of Task 2's own checklist.
-    Alert.alert('Change Profile Photo', 'Photo upload is coming soon.');
+    notify('Change Profile Photo', 'Photo upload is coming soon.');
   }
 
   return (
@@ -148,11 +210,31 @@ export default function ProfileView() {
                 autoFocus
                 editable={!isSavingId}
               />
+              {availability.checking ? (
+                <View style={styles.availabilityRow}>
+                  <ActivityIndicator size="small" color={Colors.muted} />
+                  <Text style={styles.availabilityTextMuted}>Checking availability...</Text>
+                </View>
+              ) : availability.available === true ? (
+                <View style={styles.availabilityRow}>
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                  <Text style={styles.availabilityTextAvailable}>Available</Text>
+                </View>
+              ) : availability.available === false ? (
+                <View style={styles.availabilityRow}>
+                  <Ionicons name="close-circle" size={16} color={Colors.danger} />
+                  <Text style={styles.availabilityTextTaken}>{availability.reason ?? 'Not available'}</Text>
+                </View>
+              ) : null}
               <View style={styles.idEditActions}>
                 <Pressable
                   onPress={handleSaveProfileId}
-                  disabled={isSavingId}
-                  style={styles.idActionButton}
+                  disabled={isSavingId || availability.checking || availability.available === false}
+                  style={[
+                    styles.idActionButton,
+                    (isSavingId || availability.checking || availability.available === false) &&
+                      styles.idActionButtonDisabled,
+                  ]}
                   hitSlop={8}
                 >
                   <Ionicons name="checkmark" size={20} color={Colors.accentDark} />
@@ -172,6 +254,7 @@ export default function ProfileView() {
       </Card>
 
       <Button label="Edit Profile" onPress={() => router.push('/profile/edit')} />
+      <Button label="Change Password" onPress={() => router.push('/profile/password')} variant="outline" />
     </AppShell>
   );
 }
@@ -267,5 +350,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  idActionButtonDisabled: {
+    opacity: 0.4,
+  },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.xs,
+  },
+  availabilityTextMuted: {
+    fontSize: 12,
+    color: Colors.muted,
+  },
+  availabilityTextAvailable: {
+    fontSize: 12,
+    color: Colors.success,
+    fontWeight: '600',
+  },
+  availabilityTextTaken: {
+    fontSize: 12,
+    color: Colors.danger,
+    fontWeight: '600',
   },
 });

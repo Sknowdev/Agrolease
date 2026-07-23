@@ -1,13 +1,14 @@
 import * as Device from 'expo-device';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { AuthShell } from '../../components/ui/AuthShell';
 import { Button } from '../../components/ui/Button';
 import { TextField } from '../../components/ui/TextField';
 import { Colors, Spacing } from '../../constants/colors';
 import { apiPost } from '../../lib/apiClient';
+import { notify } from '../../lib/confirm';
 
 /**
  * Security Access - Security Details screen (Task 2, Step 11).
@@ -44,7 +45,7 @@ export default function SecurityDetails() {
       );
       router.replace({ pathname: '/security/waiting', params: { officerId: securityOfficer.id } });
     } catch (err) {
-      Alert.alert('Could not submit', err instanceof Error ? err.message : 'Please try again.');
+      notify('Could not submit', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setIsSubmitting(false);
     }

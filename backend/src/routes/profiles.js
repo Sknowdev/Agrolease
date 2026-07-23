@@ -2,6 +2,7 @@ import { getSupabaseClient } from '../db/supabaseClient.js';
 import { ApiError, sendApiError } from '../lib/errors.js';
 import { requireAuth } from '../middleware/auth.js';
 import {
+  checkProfileIdAvailability,
   generateUniqueProfileId,
   resolveActiveCountryCode,
   validateAndReserveProfileId,
@@ -79,6 +80,30 @@ export default async function profilesRoute(app) {
       });
 
       return reply.status(201).send({ profile: created });
+    } catch (err) {
+      return sendApiError(reply, err);
+    }
+  });
+
+  /**
+   * GET /v1/profiles/check-id?profileId=xyz
+   * Live availability check as a user types a new Profile ID, so they
+   * find out it's taken (or invalid) before hitting Save - per
+   * explicit instruction ("right now until you hit sat/save before you
+   * can know"). Read-only, never reserves/changes anything - safe to
+   * call on every keystroke (debounced client-side). Excludes the
+   * caller's OWN current Profile ID from counting as "taken," same
+   * exclusion the real save path already uses.
+   */
+  app.get('/v1/profiles/check-id', { preHandler: requireAuth }, async (request, reply) => {
+    try {
+      const { profileId } = request.query ?? {};
+      if (!profileId) {
+        throw new ApiError(422, 'profile_id_required', 'Provide a profileId to check.', 'profileId');
+      }
+
+      const result = await checkProfileIdAvailability(profileId, request.authUser.id);
+      return reply.send(result);
     } catch (err) {
       return sendApiError(reply, err);
     }

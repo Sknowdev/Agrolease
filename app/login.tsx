@@ -1,7 +1,7 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { AuthShell } from '../components/ui/AuthShell';
 import { Button, ButtonRow } from '../components/ui/Button';
@@ -25,10 +25,51 @@ export default function Login() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function isEmail(value: string) {
     return value.includes('@');
+  }
+
+  /**
+   * Real bug fix (found live): sign-in failures were reported as "the
+   * button just spins and doesn't tell the user what's wrong." Root
+   * cause was TWO separate, stacked bugs, not one:
+   *
+   * 1. `Alert.alert(...)` is a complete no-op on web (see
+   *    lib/confirm.ts's own comment) - the error message was already
+   *    being generated correctly, it just never reached the screen at
+   *    all. Fixed by showing the error inline under the form instead
+   *    of via Alert.
+   * 2. Supabase's own `error.message` for a wrong password was the raw
+   *    string "Invalid login credentials" - not wrong, but not a
+   *    translated, user-facing message either. Explicit instruction
+   *    was to distinguish "incorrect password" from "incorrect email"
+   *    specifically - confirmed directly against live Supabase Auth
+   *    (disposable test account, three real attempts) that Supabase
+   *    intentionally returns the IDENTICAL error/code
+   *    (`invalid_credentials`, "Invalid login credentials") for both a
+   *    wrong password AND a non-existent email. This is deliberate
+   *    security behavior on Supabase's part - distinguishing the two
+   *    would let a login form be used to enumerate which emails have
+   *    real accounts, a real vulnerability class. This app cannot
+   *    build that distinction without either a security regression
+   *    (a separate "does this email exist" check) or a change to
+   *    Supabase's own behavior, neither of which is something to do
+   *    silently - flagging here rather than faking a distinction Login
+   *    can't actually know. What CAN be distinguished, and is: an
+   *    unconfirmed account (`email_not_confirmed`, a genuinely
+   *    different real code) - that gets its own real messages
+   */
+  function translateSignInError(code: string | undefined, message: string): string {
+    if (code === 'email_not_confirmed') {
+      return 'Please confirm your email before signing in - check your inbox for the confirmation link.';
+    }
+    if (code === 'invalid_credentials') {
+      return 'Incorrect email/phone or password. Please check and try again.';
+    }
+    return message || 'Sign in failed. Please try again.';
   }
 
   async function handleSignIn() {
@@ -36,6 +77,7 @@ export default function Login() {
     if (!identifier.trim()) nextErrors.identifier = 'Enter your email or phone.';
     if (!password) nextErrors.password = 'Enter your password.';
     setErrors(nextErrors);
+    setFormError(undefined);
     if (Object.keys(nextErrors).length > 0) return;
 
     setIsSubmitting(true);
@@ -46,7 +88,7 @@ export default function Login() {
         : await supabase.auth.signInWithPassword({ phone: trimmed, password });
 
       if (error) {
-        Alert.alert('Sign in failed', error.message);
+        setFormError(translateSignInError(error.code, error.message));
         return;
       }
 
@@ -93,13 +135,14 @@ export default function Login() {
 
   async function handleGoogleSignIn() {
     setIsSubmitting(true);
+    setFormError(undefined);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: getOAuthRedirectUrl() },
       });
       if (error) {
-        Alert.alert('Google sign-in failed', error.message);
+        setFormError(error.message || 'Google sign-in failed. Please try again.');
       }
       // Session change is picked up by useAuth's onAuthStateChange
       // listener and routed from app/index.tsx / _layout - no
@@ -140,6 +183,8 @@ export default function Login() {
         error={errors.password}
       />
 
+      {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+
       <Button label="Sign In" onPress={handleSignIn} loading={isSubmitting} />
 
       <ButtonRow>
@@ -173,6 +218,12 @@ const styles = StyleSheet.create({
     color: Colors.mutedOnDark,
     textAlign: 'center',
     marginBottom: Spacing.lg,
+  },
+  formError: {
+    color: '#FF9B9B',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
   },
   footerRow: {
     flexDirection: 'row',

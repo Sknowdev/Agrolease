@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { AuthShell } from '../components/ui/AuthShell';
 import { Button } from '../components/ui/Button';
 import { Colors, Spacing } from '../constants/colors';
+import { notify } from '../lib/confirm';
 import { supabase } from '../lib/supabaseClient';
 
 /**
@@ -41,15 +42,15 @@ export default function Verification() {
       const { data } = await supabase.auth.getUser();
       const email = data.user?.email;
       if (!email) {
-        Alert.alert('Could not resend', 'No email on file for this session.');
+        notify('Could not resend', 'No email on file for this session.');
         return;
       }
       const { error } = await supabase.auth.resend({ type: 'signup', email });
       if (error) {
-        Alert.alert('Could not resend', error.message);
+        notify('Could not resend', error.message);
         return;
       }
-      Alert.alert('Email sent', 'Check your inbox for a new confirmation link.');
+      notify('Email sent', 'Check your inbox for a new confirmation link.');
     } finally {
       setIsResending(false);
     }
@@ -63,7 +64,7 @@ export default function Verification() {
         router.replace('/welcome');
         return;
       }
-      Alert.alert(
+      notify(
         'Not verified yet',
         "We haven't seen your confirmation yet. Tap the link in your email, then try Continue again."
       );

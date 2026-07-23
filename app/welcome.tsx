@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
 import { ApiClientError, apiGet, apiPatch, apiPost } from '../lib/apiClient';
+import { notify } from '../lib/confirm';
 import { supabase } from '../lib/supabaseClient';
 
 type Profile = {
@@ -51,6 +52,14 @@ export default function Welcome() {
   const [idError, setIdError] = useState<string | undefined>();
   const [isSavingId, setIsSavingId] = useState(false);
 
+  // Same live availability check as My Profile's own inline edit (Task
+  // 3 addition) - debounced 400ms after the last keystroke, read-only,
+  // never reserves anything.
+  const [availability, setAvailability] = useState<{ checking: boolean; available: boolean | null; reason?: string }>(
+    { checking: false, available: null }
+  );
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     apiGet<{ profile: Profile }>('/v1/profiles/me')
       .then(({ profile: p }) => {
@@ -72,7 +81,7 @@ export default function Welcome() {
           setNeedsSetup(true);
           return;
         }
-        Alert.alert('Could not load your profile', err instanceof Error ? err.message : 'Please try again.');
+        notify('Could not load your profile', err instanceof Error ? err.message : 'Please try again.');
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -99,7 +108,40 @@ export default function Welcome() {
     }
   }
 
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!isEditingId || !editedId.trim() || editedId.trim() === profile?.profile_id) {
+      setAvailability({ checking: false, available: null });
+      return;
+    }
+
+    setAvailability({ checking: true, available: null });
+    debounceRef.current = setTimeout(() => {
+      const value = editedId.trim();
+      apiGet<{ available: boolean; reason?: string }>(`/v1/profiles/check-id?profileId=${encodeURIComponent(value)}`)
+        .then((result) => {
+          if (editedId.trim() === value) {
+            setAvailability({ checking: false, available: result.available, reason: result.reason });
+          }
+        })
+        .catch(() => {
+          if (editedId.trim() === value) {
+            setAvailability({ checking: false, available: null });
+          }
+        });
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [editedId, isEditingId, profile?.profile_id]);
+
   async function handleSaveProfileId() {
+    if (availability.available === false) {
+      setIdError(availability.reason ?? 'That Profile ID is not available.');
+      return;
+    }
     setIsSavingId(true);
     setIdError(undefined);
     try {
@@ -166,9 +208,34 @@ export default function Welcome() {
         {isEditingId ? (
           <>
             <TextField value={editedId} onChangeText={setEditedId} error={idError} autoCapitalize="none" />
+            {availability.checking ? (
+              <View style={styles.availabilityRow}>
+                <ActivityIndicator size="small" color={Colors.muted} />
+                <Text style={styles.availabilityTextMuted}>Checking availability...</Text>
+              </View>
+            ) : availability.available === true ? (
+              <View style={styles.availabilityRow}>
+                <Text style={styles.availabilityTextAvailable}>✓ Available</Text>
+              </View>
+            ) : availability.available === false ? (
+              <View style={styles.availabilityRow}>
+                <Text style={styles.availabilityTextTaken}>{availability.reason ?? 'Not available'}</Text>
+              </View>
+            ) : null}
             <View style={styles.editActions}>
-              <Button label="Save" onPress={handleSaveProfileId} loading={isSavingId} />
-              <Pressable onPress={() => setIsEditingId(false)} style={styles.cancelLink}>
+              <Button
+                label="Save"
+                onPress={handleSaveProfileId}
+                loading={isSavingId}
+                disabled={availability.checking || availability.available === false}
+              />
+              <Pressable
+                onPress={() => {
+                  setIsEditingId(false);
+                  setAvailability({ checking: false, available: null });
+                }}
+                style={styles.cancelLink}
+              >
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
             </View>
@@ -252,5 +319,25 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: Colors.muted,
+  },
+  availabilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.xs,
+  },
+  availabilityTextMuted: {
+    fontSize: 12,
+    color: Colors.muted,
+  },
+  availabilityTextAvailable: {
+    fontSize: 12,
+    color: Colors.success,
+    fontWeight: '600',
+  },
+  availabilityTextTaken: {
+    fontSize: 12,
+    color: Colors.danger,
+    fontWeight: '600',
   },
 });

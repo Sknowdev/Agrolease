@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { AuthShell } from '../components/ui/AuthShell';
 import { Button } from '../components/ui/Button';
 import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
+import { notify } from '../lib/confirm';
 import { supabase } from '../lib/supabaseClient';
 
 /**
@@ -51,7 +52,7 @@ export default function ForgotPassword() {
       const trimmed = identifier.trim();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed);
       if (resetError) {
-        Alert.alert('Could not send reset link', resetError.message);
+        notify('Could not send reset link', resetError.message);
         return;
       }
       setIsSent(true);
@@ -61,7 +62,7 @@ export default function ForgotPassword() {
   }
 
   function handleSmsPress() {
-    Alert.alert(
+    notify(
       'Coming soon',
       'Password reset via SMS isn\u2019t available yet - use email for now.'
     );

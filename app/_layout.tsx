@@ -81,6 +81,7 @@ export default function RootLayout() {
         <Stack.Screen name="recent-activity" />
         <Stack.Screen name="profile/index" />
         <Stack.Screen name="profile/edit" />
+        <Stack.Screen name="profile/password" />
         <Stack.Screen name="security/access" />
         <Stack.Screen name="security/details" />
         <Stack.Screen name="security/waiting" />

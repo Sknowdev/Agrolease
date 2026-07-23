@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -14,6 +13,7 @@ import {
 
 import { Colors, Radius, Spacing } from '../../constants/colors';
 import { apiDelete } from '../../lib/apiClient';
+import { confirmAction, notify } from '../../lib/confirm';
 import { supabase } from '../../lib/supabaseClient';
 
 /**
@@ -28,10 +28,12 @@ import { supabase } from '../../lib/supabaseClient';
  * matching the reference exactly rather than centering only in the
  * leftover space between two flex siblings.
  *
- * The hamburger opens a real menu (Logout, Delete Account) - per
- * explicit instruction, not a dead icon. Full navigation-drawer
- * contents (Settings, etc.) are a later task's concern; these two
- * account-level actions are genuinely usable today, not placeholders.
+ * The avatar (opposite the hamburger) is a real, tappable shortcut to
+ * My Profile - "My Profile" used to live inside the hamburger menu
+ * itself, but was moved here per explicit instruction, so the
+ * hamburger now only holds Refresh/Log Out/Delete Account. On screens
+ * with `showBackButton` set, this same corner shows a back arrow
+ * instead (the two are mutually exclusive, never both needed at once).
  */
 export function AppShell({
   title,
@@ -105,7 +107,7 @@ export function AppShell({
     setIsMenuOpen(false);
     const { error } = await supabase.auth.signOut();
     if (error) {
-      Alert.alert('Could not log out', error.message);
+      notify('Could not log out', error.message);
       return;
     }
     router.replace('/login');
@@ -113,13 +115,11 @@ export function AppShell({
 
   function handleDeleteAccountPress() {
     setIsMenuOpen(false);
-    Alert.alert(
+    confirmAction(
       'Delete Account',
       'This permanently deletes your account and profile. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: confirmDeleteAccount },
-      ]
+      confirmDeleteAccount,
+      { confirmLabel: 'Delete' }
     );
   }
 
@@ -129,10 +129,7 @@ export function AppShell({
       await supabase.auth.signOut();
       router.replace('/login');
     } catch (err) {
-      Alert.alert(
-        'Could not delete account',
-        err instanceof Error ? err.message : 'Please try again.'
-      );
+      notify('Could not delete account', err instanceof Error ? err.message : 'Please try again.');
     }
   }
 
@@ -164,13 +161,25 @@ export function AppShell({
               <Ionicons name="arrow-back" size={22} color="#fff" />
             </Pressable>
           ) : (
-            <View style={styles.avatarCircle}>
+            // Real bug fix / explicit request: "My Profile" used to
+            // live inside the hamburger menu (opposite corner) -
+            // removed from there per instruction, and this avatar spot
+            // (opposite the hamburger) is now the real, tappable way to
+            // reach it instead, matching the reference's own avatar
+            // placement while actually being useful rather than a
+            // static icon with no destination.
+            <Pressable
+              onPress={() => router.push('/profile')}
+              style={styles.avatarCircle}
+              hitSlop={8}
+              accessibilityLabel="My Profile"
+            >
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
                 <Ionicons name="person" size={22} color="#fff" />
               )}
-            </View>
+            </Pressable>
           )}
           <View style={styles.headerTextBlock}>
             <Text style={styles.headerTitle}>{title}</Text>
@@ -219,14 +228,6 @@ export function AppShell({
                   <View style={styles.menuDivider} />
                 </>
               ) : null}
-              <MenuItem
-                icon={<Ionicons name="person-outline" size={18} color={Colors.text} />}
-                label="My Profile"
-                onPress={() => {
-                  setIsMenuOpen(false);
-                  router.push('/profile');
-                }}
-              />
               <MenuItem
                 icon={<Ionicons name="log-out-outline" size={18} color={Colors.text} />}
                 label="Log Out"

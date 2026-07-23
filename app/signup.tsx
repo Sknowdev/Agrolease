@@ -1,7 +1,7 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { AuthShell } from '../components/ui/AuthShell';
 import { Button, ButtonRow } from '../components/ui/Button';
@@ -9,6 +9,7 @@ import { TextField } from '../components/ui/TextField';
 import { Colors, Spacing } from '../constants/colors';
 import { getOAuthRedirectUrl } from '../constants/config';
 import { apiPost } from '../lib/apiClient';
+import { notify } from '../lib/confirm';
 import { supabase } from '../lib/supabaseClient';
 
 type FormErrors = Partial<
@@ -76,7 +77,7 @@ export default function SignUp() {
       });
 
       if (error) {
-        Alert.alert('Sign up failed', error.message);
+        notify('Sign up failed', error.message);
         return;
       }
 
@@ -105,7 +106,7 @@ export default function SignUp() {
       // session exists if one hasn't been created yet.
       router.replace('/verification');
     } catch (err) {
-      Alert.alert('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
+      notify('Sign up failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -119,7 +120,7 @@ export default function SignUp() {
         options: { redirectTo: getOAuthRedirectUrl() },
       });
       if (error) {
-        Alert.alert('Google sign-in failed', error.message);
+        notify('Google sign-in failed', error.message);
       }
       // Per the brief: Google sign-in skips Verification entirely -
       // handled in app/_layout.tsx's auth-state routing, which sends a

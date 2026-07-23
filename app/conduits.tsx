@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BottomTabBar } from './home';
 import { Button } from '../components/ui/Button';
@@ -10,6 +10,7 @@ import { TextField } from '../components/ui/TextField';
 import { AppShell } from '../components/ui/AppShell';
 import { Colors, Radius, Spacing } from '../constants/colors';
 import { apiDelete, apiGet, apiPost } from '../lib/apiClient';
+import { confirmAction, notify } from '../lib/confirm';
 
 type Conduit = {
   id: string;
@@ -157,7 +158,7 @@ function ConduitRow({ conduit, onRegenerated }: { conduit: Conduit; onRegenerate
       await apiPost(`/v1/conduits/${conduit.id}/invitation`, { regenerateId: true });
       onRegenerated();
     } catch (err) {
-      Alert.alert('Could not regenerate', err instanceof Error ? err.message : 'Please try again.');
+      notify('Could not regenerate', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setIsRegenerating(false);
     }
@@ -170,13 +171,11 @@ function ConduitRow({ conduit, onRegenerated }: { conduit: Conduit; onRegenerate
 
   function handleDeletePress() {
     setIsMenuOpen(false);
-    Alert.alert(
+    confirmAction(
       'Delete Conduit',
       `This permanently deletes "${conduit.land_name ?? conduit.conduit_id}". This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: confirmDelete },
-      ]
+      confirmDelete,
+      { confirmLabel: 'Delete' }
     );
   }
 
@@ -186,7 +185,7 @@ function ConduitRow({ conduit, onRegenerated }: { conduit: Conduit; onRegenerate
       await apiDelete(`/v1/conduits/${conduit.id}`);
       onRegenerated();
     } catch (err) {
-      Alert.alert('Could not delete', err instanceof Error ? err.message : 'Please try again.');
+      notify('Could not delete', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       setIsDeleting(false);
     }

@@ -527,9 +527,36 @@ export default async function conduitsRoute(app) {
    * officers - can exist against them) have nothing else referencing
    * them yet, so a hard delete is safe and matches what "delete this
    * conduit" actually means to the user, rather than a soft-cancel
-   * that would still show up somewhere. An active Conduit with real
-   * downstream data would need a different (archive/cancel) flow -
-   * not built here since no task has created that data yet.
+   * that would still show up somewhere.
+   *
+   * Real bug fix (found live, full end-to-end verification pass): a
+   * Conduit that had already been accepted (status pending_payment+)
+   * has at least one real `notifications` row referencing it (e.g.
+   * `conduit_invitation_accepted`, written by the accept route above) -
+   * `notifications.conduit_id` has a foreign key back to `conduits.id`
+   * with no ON DELETE CASCADE, so deleting the Conduit directly failed
+   * with a real Postgres FK violation (23503) on any Conduit that had
+   * gotten far enough to generate a notification. A still-draft
+   * Conduit with zero notifications yet deleted fine, which is why
+   * this task's own earlier testing (which only ever exercised delete
+   * against fresh drafts) never caught it. Fixed two ways:
+   *   1. `notifications` rows for this Conduit are deleted first, in
+   *      the same request - purely informational, always safe to
+   *      discard alongside the Conduit itself.
+   *   2. Every OTHER table that references conduits(id) per the schema
+   *      (security_officers, link_codes, harvest_records, invoices,
+   *      disputes, messages, agreement_change_log,
+   *      fixed_term_overwrites, trust_scores, satellite_reports,
+   *      conduit_sub_parcels, land_utilization_snapshots) is checked
+   *      first - if ANY of these already has a real row for this
+   *      Conduit (e.g. a security officer linked via Task 2's already-
+   *      live Security Access flow), the delete is BLOCKED with a
+   *      clear message rather than either silently cascading through
+   *      data this task doesn't own, or failing with an opaque 500.
+   *      None of these tables have any real write path from Task 3
+   *      itself, but Task 2's Security Access flow can write to
+   *      security_officers/link_codes against a real Conduit today, so
+   *      this defensive check is not hypothetical.
    */
   app.delete('/v1/conduits/:id', { preHandler: requireAuth }, async (request, reply) => {
     try {
@@ -539,6 +566,49 @@ export default async function conduitsRoute(app) {
 
       const conduit = await loadConduitOr404(supabase, id);
       assertOwnsConduit(conduit, profileId);
+
+      const dependentTables = [
+        'security_officers',
+        'link_codes',
+        'harvest_records',
+        'invoices',
+        'disputes',
+        'messages',
+        'agreement_change_log',
+        'fixed_term_overwrites',
+        'trust_scores',
+        'satellite_reports',
+        'conduit_sub_parcels',
+        'land_utilization_snapshots',
+      ];
+
+      for (const table of dependentTables) {
+        const { count, error: checkError } = await supabase
+          .from(table)
+          .select('id', { count: 'exact', head: true })
+          .eq('conduit_id', id);
+        if (checkError) {
+          throw new ApiError(500, 'conduit_delete_check_failed', 'Could not verify this Conduit has no linked records.', undefined, checkError);
+        }
+        if (count && count > 0) {
+          throw new ApiError(
+            409,
+            'conduit_has_dependent_records',
+            'This Conduit has linked records (e.g. security officers, harvest records) and cannot be deleted.'
+          );
+        }
+      }
+
+      const { error: notificationsDeleteError } = await supabase.from('notifications').delete().eq('conduit_id', id);
+      if (notificationsDeleteError) {
+        throw new ApiError(
+          500,
+          'conduit_delete_failed',
+          'Could not delete this Conduit. Please try again.',
+          undefined,
+          notificationsDeleteError
+        );
+      }
 
       const { error } = await supabase.from('conduits').delete().eq('id', id);
       if (error) {
